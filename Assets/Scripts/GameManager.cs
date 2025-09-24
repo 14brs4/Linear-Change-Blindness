@@ -31,7 +31,7 @@ public class GameManager : MonoBehaviour
     [Tooltip("Select the type of change to detect in the experiment")]
     public ChangeType changeType = ChangeType.Hue;
     
-
+//Hello world!
     public int staticTrials = 20;
     public int innerMovingTrials = 20;
     public int outerMovingTrials = 20;
