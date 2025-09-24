@@ -1,0 +1,45 @@
+{
+    "name": "MyInputActions",
+    "maps": [
+        {
+            "name": "UI-N",
+            "id": "17912897-fc74-4d1b-a297-5960059553b7",
+            "actions": [
+                {
+                    "name": "UI/Click",
+                    "type": "Button",
+                    "id": "713d3dd1-de4d-466a-943c-0a1bdc975472",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "325d8793-24d7-4157-9bdb-243d93416738",
+                    "path": "<XRController>{LeftHand}/{PrimaryTrigger}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "UI/Click",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "70a8d816-c315-4ab8-8040-ad2a888572e9",
+                    "path": "<XRController>{RightHand}/{PrimaryTrigger}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "UI/Click",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
