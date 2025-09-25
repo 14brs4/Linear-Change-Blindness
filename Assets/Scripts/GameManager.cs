@@ -33,11 +33,7 @@ public class GameManager : MonoBehaviour
     
 //Hello world!
     public int staticTrials = 20;
-    public int innerMovingTrials = 20;
-    public int outerMovingTrials = 20;
-    public int bothMovingTrials = 20;
-    public bool changeInnerRing = true;
-    public bool changeOuterRing = true;
+    public int movingTrials = 20;
     
     private bool oneDirectionTrials = true;
     private bool twoDirectionTrials = false;
@@ -47,9 +43,6 @@ public class GameManager : MonoBehaviour
     public bool changeValue => changeType == ChangeType.Value;
     public bool changeSize => changeType == ChangeType.Size;
     public bool changeOrientation => changeType == ChangeType.Orientation;
-    private GameObject innerRingParent;
-    private GameObject outerRingParent;
-    private GameObject middleRingParent;
     
     // Trial length details
     [Header("General Settings")]
@@ -62,8 +55,14 @@ public class GameManager : MonoBehaviour
     [CustomLabel("Blink Duration (s)")]
     [ConditionalEnable("blinkSpheres", true)]
     public float blinkDuration = 0.3f; // Adjustable blink timing for ring cue
-    [CustomLabel("Rotation Speed (°/s)")]
-    public float rotationSpeed = 90f; // Speed of rotation in degrees per second
+    [CustomLabel("Movement Speed (units/s)")]
+    public float movementSpeed = 2f; // Speed of linear movement towards user in units per second
+    
+    [Header("Linear Movement Settings")]
+    [CustomLabel("Movement Distance (units)")]
+    public float movementDistance = 3f; // Total distance spheres will move towards the user
+    [CustomLabel("Starting Z Position")]
+    public float startingZPosition = 0f; // Starting Z position for spheres (will move to startingZ - movementDistance)
 
     private string participantFileName
     {
@@ -77,8 +76,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Outer ring settings
-    private int numberOfRings = 3;
+    // Single ring system - only Ring 2 (middle ring) is used
+    private int numberOfRings = 1;
     
 
     // Folder for saving results (always in the unity project folder)
@@ -86,30 +85,12 @@ public class GameManager : MonoBehaviour
 
     // Sphere details
     
-    [CustomLabel("# of Spheres - Ring 1")]
-    public int ringOneNumSpheres = 6; // Number of spheres to create
-    [CustomLabel("# of Spheres - Ring 2")]
-    public int ringTwoNumSpheres = 6;
-    [CustomLabel("# of Spheres - Ring 3")]
-    public int ringThreeNumSpheres = 6;
-    //public int numberOfPassiveSpheres = 0; // Set to >0 to enable passive ring
-    [CustomLabel("Radius - Ring 1")]
-    public float ringOneRadius = 1f; // Radius of the ring
-    [CustomLabel("Radius - Ring 2")]
-    public float ringTwoRadius = 2f;
-    [CustomLabel("Radius - Ring 3")]
-    public float ringThreeRadius = 3f;
+    [CustomLabel("# of Spheres")]
+    public int numberOfSpheres = 6; // Number of spheres to create in the single ring
+    [CustomLabel("Ring Radius")]
+    public float ringRadius = 2f; // Radius of the ring
 
     // --- Outer (third) ring settings ---
-    //[Header("Outer Ring (Does Nothing)")]
-    
-
-    
-    private bool genericInactiveRing = true;
-    // Removed unused outerRingParentObject and outerRingSpheres; use outerRingParent and outerSpheres instead
-
-    
-
     // Change details (note: to change details about orientation stripes go to the stripes material in the materials folder)
     [Range(0f, 1f)] private float defaultHue = 0f;
 
@@ -157,8 +138,8 @@ public class GameManager : MonoBehaviour
     public float maxSize = 1.5f;
     
     [Header("Orientation Change Settings")]
-    [Tooltip("When enabled, rotates each sphere individually to preserve stripe orientations during ring movement. When disabled, uses more efficient parent rotation but sphere orientations may change. Only affects orientation trials.")]
-    public bool ferrisWheelSpin = false; // Rotates all spheres individually instead of using parent rotation (less efficient but retains orientations)
+    [Tooltip("When enabled, moves each sphere individually to preserve stripe orientations during linear movement. When disabled, uses more efficient parent movement but sphere orientations may change. Only affects orientation trials.")]
+    public bool individualSphereMovement = false; // Moves all spheres individually instead of using parent movement (less efficient but retains orientations)
 
     [CustomLabel("Orientation Change (°)")]
     [Tooltip("Orientation change amount in degrees for striped spheres.")]
@@ -177,32 +158,20 @@ public class GameManager : MonoBehaviour
 
     // Using purely random attribute generation within acceptable ranges - no similarity checks
 
-    // Outer ring separate change magnitudes
-    private bool separateOuterRingChangeMagnitudes = false;
-    private float outerRingRotationSpeed = 90f;
-    [Range(0f, 1f)] private float outerRingHueChange = 0.2f;
-    [Range(0f, 0.5f)] private float outerRingValueChange = 0.2f;
-    private float outerRingSizeChange = 0.2f;
-    private float outerRingOrientationChange = 40f;
+    // Single ring system - no separate ring configurations needed
+
 
 
 
     
     
-    // Ring configuration tracking for even distribution when both rings are allowed
-    private int ringConfig1Trials = 0; // changeInnerRing = true, changeOuterRing = false behavior
-    private int ringConfig2Trials = 0; // changeInnerRing = false, changeOuterRing = true behavior
-    private enum RingConfiguration { Config1, Config2 } // Config1: Ring2&3 active, Config2: Ring1&2 active
-    private RingConfiguration currentRingConfig;
-    private bool currentRingConfigSet = false; // Track if configuration has been initialized
+    // Only Ring 2 (middle ring) is used in this simplified version
     //public int oneDirectionTrials = 24;
     //public int twoDirectionTrials = 24;
 
     // Tracking number of trial type run
     private int staticTrialsRun = 0;
-    private int innerMovingTrialsRun = 0;
-    private int outerMovingTrialsRun = 0;
-    private int bothMovingTrialsRun = 0;
+    private int movingTrialsRun = 0;
     //private int oneDirectionTrialsRun = 0;
     //private int twoDirectionTrialsRun = 0;
     
@@ -210,14 +179,8 @@ public class GameManager : MonoBehaviour
     private int trialNumber = 0;
 
     // Trial types for random selection
-    private string[] trialTypes = { "Static", "InnerMoving", "OuterMoving", "BothMoving" };
-    //private string[] staticSpeedTrialTypes = { "Static", "One", "Two" };
-    //private string[] variableSpeedTrialTypes = { "Static", "Fast", "Slow", "FastSlow", "SlowFast" };
-    //private string[] rotationalStaticSpeedTrialTypes = { "Static", "RotationalOneDir", "RotationalTwoDir" };
-    //private string[] rotationalVariableSpeedTrialTypes = { "RotationalStatic", "RotationalFast", "RotationalSlow", "RotationalFastSlow", "RotationalSlowFast" };
-
-    
-    private bool changeOuterRingSphere = false;
+    private string[] trialTypes = { "Static", "Moving" };
+    // Note: Moving refers to linear movement towards the user
 
     // Results details
     private string[][] results = new string[0][];
@@ -239,9 +202,8 @@ public class GameManager : MonoBehaviour
     private bool blackScreenUp;
 
     // List for storing objects
-    [HideInInspector] public GameObject[] innerSpheres; // Store references to the created spheres
-    private GameObject[] outerSpheres;
-    private GameObject[] middleSpheres;
+    [HideInInspector] public GameObject[] spheres; // Store references to the created spheres
+    [HideInInspector] public GameObject ringParent; // Parent object for the single ring
 
     [HideInInspector] public TMPro.TextMeshProUGUI focusPointText; // Assign in Inspector
 
@@ -263,7 +225,6 @@ public class GameManager : MonoBehaviour
     private int preGeneratedSphereToChange = -1;
     private bool preGeneratedAddChange = false;
     private string preGeneratedTrialType = "";
-    private RingConfiguration preGeneratedRingConfig;
     // private bool preGeneratedRingConfigSet = false; // Currently unused - background generation disabled
     
     // High-quality random generation using fresh cryptographic providers
@@ -333,10 +294,7 @@ public class GameManager : MonoBehaviour
             Debug.Log("[COLOR SYSTEM] Scientific perceptual color system configured for change blindness experiment");
         }
 
-        // Reset ring configuration counters for a fresh experiment session
-        ringConfig1Trials = 0;
-        ringConfig2Trials = 0;
-        Debug.Log("[GameManager] Ring configuration counters reset for new experiment session");
+        // Single ring system - no configuration needed
 
         // Show initial black screen with VR controller instruction
         Debug.Log("[GameManager] Calling ShowBlackScreen at Start()");
@@ -426,87 +384,17 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
-    // Determine which ring configuration to use for this trial
-    private RingConfiguration DetermineRingConfiguration(bool forPreGeneration = false)
-    {
-        Debug.Log($"[DetermineRingConfiguration] changeInnerRing: {changeInnerRing}, changeOuterRing: {changeOuterRing}");
-        
-        RingConfiguration selectedConfig;
-        
-        if (changeInnerRing && !changeOuterRing)
-        {
-            // Config2: Ring 1 & 2 active (Ring 3 inactive) - changeInnerRing only
-            selectedConfig = RingConfiguration.Config2;
-            Debug.Log("[DetermineRingConfiguration] Using Config2 (Ring 1 & 2 active, Ring 3 inactive)");
-        }
-        else if (!changeInnerRing && changeOuterRing)
-        {
-            // Config1: Ring 2 & 3 active (Ring 1 inactive) - changeOuterRing only
-            selectedConfig = RingConfiguration.Config1;
-            Debug.Log("[DetermineRingConfiguration] Using Config1 (Ring 2 & 3 active, Ring 1 inactive)");
-        }
-        else if (changeInnerRing && changeOuterRing)
-        {
-            // Both allowed - distribute evenly
-            int totalTrials = staticTrials + innerMovingTrials + outerMovingTrials + bothMovingTrials;
-            int halfTrials = totalTrials / 2;
-            
-            Debug.Log($"[DetermineRingConfiguration] Both rings allowed. Config1 trials: {ringConfig1Trials}, Config2 trials: {ringConfig2Trials}, Half trials: {halfTrials}");
-            
-            if (ringConfig1Trials < halfTrials && ringConfig2Trials < halfTrials)
-            {
-                // Both configs have room, choose randomly using high-quality RNG
-                bool useConfig1 = GenerateHighQualityRandom() < 0.5f;
-                selectedConfig = useConfig1 ? RingConfiguration.Config1 : RingConfiguration.Config2;
-                Debug.Log($"[DetermineRingConfiguration] Both configs have room, randomly chose: {selectedConfig} (random value: {(useConfig1 ? "<0.5" : ">=0.5")})");
-            }
-            else if (ringConfig1Trials < halfTrials)
-            {
-                // Only Config1 has room
-                selectedConfig = RingConfiguration.Config1;
-                Debug.Log("[DetermineRingConfiguration] Only Config1 has room");
-            }
-            else
-            {
-                // Only Config2 has room (or both are full, default to Config2)
-                selectedConfig = RingConfiguration.Config2;
-                Debug.Log("[DetermineRingConfiguration] Only Config2 has room (or both full)");
-            }
-            
-            // Increment counter for chosen config
-            if (selectedConfig == RingConfiguration.Config1)
-                ringConfig1Trials++;
-            else
-                ringConfig2Trials++;
-                
-            Debug.Log($"[DetermineRingConfiguration] After increment - Config1 trials: {ringConfig1Trials}, Config2 trials: {ringConfig2Trials}");
-        }
-        else
-        {
-            // Neither ring is allowed to change, log error and default to Config2
-            Debug.LogError("[GameManager] Both changeInnerRing and changeOuterRing are false. Defaulting to Config2 (Ring 1 & 2 active).");
-            selectedConfig = RingConfiguration.Config2;
-        }
-        
-        // Only set currentRingConfig if this is for immediate use (not pre-generation)
-        if (!forPreGeneration)
-        {
-            currentRingConfig = selectedConfig;
-            currentRingConfigSet = true;
-        }
-        
-        return selectedConfig;
-    }
+
 
 
     // Running trials
     private void StartNewTrial()
     {
         // Reset ring configuration for each new trial
-        currentRingConfigSet = false;
+        // Single ring system - no configuration needed
         Debug.Log("[GameManager] Ring configuration reset for new trial");
         
-        int totalTrials = staticTrials + innerMovingTrials + outerMovingTrials + bothMovingTrials;
+        int totalTrials = staticTrials + movingTrials;
         if (trialNumber >= totalTrials)
         {
             experimentRunning = false;
@@ -529,17 +417,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"[GameManager] GenerateAndExecuteTrial starting for trial {trialNumber + 1}");
         
-        // Only determine configuration if we don't already have one
-        if (!currentRingConfigSet)
-        {
-            Debug.Log("[GameManager] No current ring configuration, determining new one");
-            currentRingConfig = DetermineRingConfiguration();
-            currentRingConfigSet = true;
-        }
-        else
-        {
-            Debug.Log($"[GameManager] Using existing ring configuration: {currentRingConfig}");
-        }
+        // Single ring system - no configuration needed
         
         trialResults = new string[headers.Length];
         for (int i = 0; i < 29; i++)
@@ -565,13 +443,13 @@ public class GameManager : MonoBehaviour
         trialResults[16] = movementStartDelay.ToString();
         trialResults[17] = blinkSpheres.ToString();
         trialResults[18] = blinkSpheres ? blinkDuration.ToString() : "";
-        trialResults[19] = rotationSpeed.ToString();
-        trialResults[20] = ringOneNumSpheres.ToString();
-        trialResults[21] = ringTwoNumSpheres.ToString();
-        trialResults[22] = ringThreeNumSpheres.ToString();
-        trialResults[23] = ringOneRadius.ToString();
-        trialResults[24] = ringTwoRadius.ToString();
-        trialResults[25] = ringThreeRadius.ToString();
+        trialResults[19] = movementSpeed.ToString();
+        trialResults[20] = numberOfSpheres.ToString();
+        trialResults[21] = "0"; // No second ring
+        trialResults[22] = "0"; // No third ring
+        trialResults[23] = ringRadius.ToString();
+        trialResults[24] = "0"; // No second ring radius
+        trialResults[25] = "0"; // No third ring radius
         // Removed Default Hue column
         trialResults[26] = sphereSaturation.ToString();
         trialResults[27] = sphereValue.ToString();
@@ -586,28 +464,11 @@ public class GameManager : MonoBehaviour
         else if (changeOrientation) trialResults[2] = "Orientation";
         else trialResults[2] = "";
         
-        // Only Ring 2 spheres are selectable - always use middle ring
-        int sphereToChange = Random.Range(0, ringTwoNumSpheres);
+        // Only single ring spheres are selectable
+        int sphereToChange = Random.Range(0, numberOfSpheres);
         
-        // Set Attendant Ring - Ring 2 acts as either "Inner" or "Outer" based on configuration
-        if (numberOfRings == 3)
-        {
-            if (currentRingConfig == RingConfiguration.Config1)
-            {
-                trialResults[4] = "Inner";
-                changeOuterRingSphere = false;
-            }
-            else if (currentRingConfig == RingConfiguration.Config2)
-            {
-                trialResults[4] = "Outer";
-                changeOuterRingSphere = true;
-            }
-        }
-        else
-        {
-            trialResults[4] = "Inner";
-            changeOuterRingSphere = false;
-        }
+        // Single ring system - always use the single ring
+        trialResults[4] = "Single";
         
         trialResults[9] = (sphereToChange + 1).ToString();
         bool addChange = Random.Range(0, 2) == 0;
@@ -615,9 +476,7 @@ public class GameManager : MonoBehaviour
         // Build a list of available trial types
         var availableTrialTypes = new System.Collections.Generic.List<string>();
         if (staticTrialsRun < staticTrials) availableTrialTypes.Add("Static");
-        if (innerMovingTrialsRun < innerMovingTrials) availableTrialTypes.Add("InnerMoving");
-        if (outerMovingTrialsRun < outerMovingTrials) availableTrialTypes.Add("OuterMoving");
-        if (bothMovingTrialsRun < bothMovingTrials) availableTrialTypes.Add("BothMoving");
+        if (movingTrialsRun < movingTrials) availableTrialTypes.Add("Moving");
 
         if (availableTrialTypes.Count == 0)
         {
@@ -654,63 +513,13 @@ public class GameManager : MonoBehaviour
         
         trialResults[3] = movementTypeForCSV;
         
-        // Ring Configuration - Note: Output is reversed from internal enum
-        // Config1 (Ring2&3 active) outputs as "2", Config2 (Ring1&2 active) outputs as "1"
-        trialResults[5] = (currentRingConfig == RingConfiguration.Config1) ? "2" : "1";
+        // Single ring system - always use configuration "1"
+        trialResults[5] = "1";
         
-        // Ring State columns - determine based on ring configuration and movement type
-        string ring1State, ring2State, ring3State;
-        
-        if (currentRingConfig == RingConfiguration.Config1)
-        {
-            // Config1: Ring 2 & 3 active, Ring 1 inactive
-            ring1State = "Inactive";
-            if (trialType == "Static")
-            {
-                ring2State = "Static";
-                ring3State = "Static";
-            }
-            else if (trialType == "InnerMoving")
-            {
-                ring2State = "Moving";
-                ring3State = "Static";
-            }
-            else if (trialType == "OuterMoving")
-            {
-                ring2State = "Static";
-                ring3State = "Moving";
-            }
-            else // BothMoving
-            {
-                ring2State = "Moving";
-                ring3State = "Moving";
-            }
-        }
-        else // Config2
-        {
-            // Config2: Ring 1 & 2 active, Ring 3 inactive
-            ring3State = "Inactive";
-            if (trialType == "Static")
-            {
-                ring1State = "Static";
-                ring2State = "Static";
-            }
-            else if (trialType == "InnerMoving")
-            {
-                ring1State = "Moving";
-                ring2State = "Static";
-            }
-            else if (trialType == "OuterMoving")
-            {
-                ring1State = "Static";
-                ring2State = "Moving";
-            }
-            else // BothMoving
-            {
-                ring1State = "Moving";
-                ring2State = "Moving";
-            }
-        }
+        // Single ring system - simplified ring states
+        string ring1State = "N/A"; // No Ring 1
+        string ring2State = trialType == "Static" ? "Static" : "Moving"; // Only Ring 2 exists
+        string ring3State = "N/A"; // No Ring 3
         
         trialResults[6] = ring1State;
         trialResults[7] = ring2State;
@@ -730,33 +539,19 @@ public class GameManager : MonoBehaviour
             int colorCount = Mathf.Min(allColors.Length, trialResults.Length - 31);
             int colorIndex = 0;
             
-            // Ring 1 spheres
-            for (int i = 0; i < ringOneNumSpheres && (31 + colorIndex) < trialResults.Length; i++)
-            {
-                bool isRing1Active = (currentRingConfig == RingConfiguration.Config2); // Ring 1 active in Config2
-                trialResults[31 + colorIndex] = isRing1Active && colorIndex < colorCount ? allColors[colorIndex] : "";
-                colorIndex++;
-            }
+            // Ring 1 doesn't exist in single ring system - skip
             
-            // Ring 2 spheres (middle ring - always active when present)
-            if (numberOfRings == 3)
+            // Single ring spheres
+            for (int i = 0; i < numberOfSpheres && (31 + colorIndex) < trialResults.Length; i++)
             {
-                for (int i = 0; i < ringTwoNumSpheres && (31 + colorIndex) < trialResults.Length; i++)
-                {
-                    trialResults[31 + colorIndex] = colorIndex < colorCount ? allColors[colorIndex] : "";
-                    colorIndex++;
-                }
+                trialResults[31 + colorIndex] = colorIndex < colorCount ? allColors[colorIndex] : "";
+                colorIndex++;
             }
             
             // Ring 3 spheres (outer ring)
             if (numberOfRings >= 2)
             {
-                for (int i = 0; i < ringThreeNumSpheres && (31 + colorIndex) < trialResults.Length; i++)
-                {
-                    bool isRing3Active = (currentRingConfig == RingConfiguration.Config1); // Ring 3 active in Config1
-                    trialResults[31 + colorIndex] = isRing3Active && colorIndex < colorCount ? allColors[colorIndex] : "";
-                    colorIndex++;
-                }
+                // Ring 3 doesn't exist in single ring system - skip
             }
         }
         
@@ -766,23 +561,11 @@ public class GameManager : MonoBehaviour
             staticTrialsRun++;
             StartCoroutine(StaticChange(sphereToChange, addChange));
         }
-        else if (trialType == "InnerMoving")
+        else if (trialType == "Moving")
         {
             trialNumber++;
-            innerMovingTrialsRun++;
-            StartCoroutine(RotationalOneDirCoroutine(sphereToChange, addChange, RingMovementType.Inner));
-        }
-        else if (trialType == "OuterMoving")
-        {
-            trialNumber++;
-            outerMovingTrialsRun++;
-            StartCoroutine(RotationalOneDirCoroutine(sphereToChange, addChange, RingMovementType.Outer));
-        }
-        else if (trialType == "BothMoving")
-        {
-            trialNumber++;
-            bothMovingTrialsRun++;
-            StartCoroutine(RotationalOneDirCoroutine(sphereToChange, addChange, RingMovementType.Both));
+            movingTrialsRun++;
+            StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
         }
     }
     
@@ -803,18 +586,14 @@ public class GameManager : MonoBehaviour
         // Wait a frame to avoid frame rate issues
         yield return null;
         
-        // Pre-determine next trial parameters
-        preGeneratedRingConfig = DetermineRingConfiguration(forPreGeneration: true);
-        // preGeneratedRingConfigSet = true; // Commented out - background generation disabled
-        preGeneratedSphereToChange = Random.Range(0, ringTwoNumSpheres);
+        // Pre-determine next trial parameters (single ring system)
+        preGeneratedSphereToChange = Random.Range(0, numberOfSpheres);
         preGeneratedAddChange = Random.Range(0, 2) == 0;
         
         // Determine next trial type
         var availableTrialTypes = new System.Collections.Generic.List<string>();
         if (staticTrialsRun < staticTrials) availableTrialTypes.Add("Static");
-        if (innerMovingTrialsRun < innerMovingTrials) availableTrialTypes.Add("InnerMoving");
-        if (outerMovingTrialsRun < outerMovingTrials) availableTrialTypes.Add("OuterMoving");
-        if (bothMovingTrialsRun < bothMovingTrials) availableTrialTypes.Add("BothMoving");
+        if (movingTrialsRun < movingTrials) availableTrialTypes.Add("Moving");
         
         if (availableTrialTypes.Count > 0)
         {
@@ -837,53 +616,17 @@ public class GameManager : MonoBehaviour
     // Pre-calculate sphere colors without creating GameObjects
     private string[] PreCalculateSphereColors()
     {
-        int totalSpheres = ringOneNumSpheres + (numberOfRings == 3 ? ringTwoNumSpheres : 0) + (numberOfRings >= 2 ? ringThreeNumSpheres : 0);
-        string[] allColors = new string[totalSpheres];
+        // Single ring system - only generate colors for the spheres
+        string[] allColors = new string[numberOfSpheres];
         
-        // Determine ring configuration for inactive ring detection
-        RingConfiguration config = DetermineRingConfiguration(forPreGeneration: true);
-        
-        // Generate colors for each ring (random or default based on genericInactiveRing setting)
-        // Inner ring (Ring 1)
-        var innerColors = (genericInactiveRing && config == RingConfiguration.Config1) 
-            ? GenerateDefaultAttributes(ringOneNumSpheres)  // Ring 1 is inactive in Config1
-            : GenerateRandomAttributes(ringOneNumSpheres);
-        for (int i = 0; i < ringOneNumSpheres; i++)
+        // Generate random attributes for all spheres in the single ring
+        var sphereColors = GenerateRandomAttributes(numberOfSpheres);
+        for (int i = 0; i < numberOfSpheres; i++)
         {
-            allColors[i] = innerColors[i];
+            allColors[i] = sphereColors[i];
         }
         
-        // Middle ring (Ring 2, if 3 rings)
-        if (numberOfRings == 3)
-        {
-            var middleColors = GenerateRandomAttributes(ringTwoNumSpheres); // Ring 2 is always active
-            for (int i = 0; i < ringTwoNumSpheres; i++)
-            {
-                allColors[ringOneNumSpheres + i] = middleColors[i];
-            }
-        }
-        
-        // Outer ring (Ring 3)
-        if (ringThreeNumSpheres > 0)
-        {
-            var outerColors = (genericInactiveRing && config == RingConfiguration.Config2)
-                ? GenerateDefaultAttributes(ringThreeNumSpheres)  // Ring 3 is inactive in Config2
-                : GenerateRandomAttributes(ringThreeNumSpheres);
-            for (int i = 0; i < ringThreeNumSpheres; i++)
-            {
-                int idx = numberOfRings == 3 ? ringOneNumSpheres + ringTwoNumSpheres + i : ringOneNumSpheres + i;
-                allColors[idx] = outerColors[i];
-            }
-        }
-        
-        if (genericInactiveRing)
-        {
-            Debug.Log($"[GameManager] Generated colors with generic inactive ring (Config: {config}): {string.Join(", ", allColors)}");
-        }
-        else
-        {
-            Debug.Log($"[GameManager] Generated random colors: {string.Join(", ", allColors)}");
-        }
+        Debug.Log($"[GameManager] Generated colors for single ring: {string.Join(", ", allColors)}");
         return allColors;
     }
     
@@ -1624,10 +1367,10 @@ public class GameManager : MonoBehaviour
     // Destroy sphere from last trial
     private void DestroySpheres()
     {
-        // Loop through all inner spheres
-        if (innerSpheres != null)
+        // Loop through all spheres in the single ring
+        if (spheres != null)
         {
-            foreach (GameObject sphere in innerSpheres)
+            foreach (GameObject sphere in spheres)
             {
                 // If the sphere exists destroy it
                 if (sphere != null)
@@ -1637,43 +1380,15 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        // Loop through all middle spheres
-        if (middleSpheres != null)
+        // Destroy the ring parent
+        if (ringParent != null)
         {
-            foreach (GameObject sphere in middleSpheres)
-            {
-                // If the sphere exists destroy it
-                if (sphere != null)
-                {
-                    Destroy(sphere); // Destroy each sphere in the array
-                }
-            }
+            Destroy(ringParent);
+            ringParent = null;
         }
         
-        // Loop through all outer spheres
-        if (outerSpheres != null)
-        {
-            foreach (GameObject sphere in outerSpheres)
-            {
-                // If the sphere exists destroy it
-                if (sphere != null)
-                {
-                    Destroy(sphere); // Destroy each sphere in the array
-                }
-            }
-        }
-        
-        // Create new sphere arrays for the next set
-        innerSpheres = new GameObject[ringOneNumSpheres];
-        if (numberOfRings >= 3)
-        {
-            middleSpheres = new GameObject[ringTwoNumSpheres];
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
-        else if (numberOfRings >= 2)
-        {
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
+        // Create new sphere array for the next set
+        spheres = new GameObject[numberOfSpheres];
     }
 
     // Run a static trial
@@ -1828,27 +1543,20 @@ public class GameManager : MonoBehaviour
         if (focusPointText != null)
             focusPointText.enabled = true;
         string[] sphereColors = CreateRingOfSpheres(centerPoint);
-        StartCoroutine(RotationalOneDirCoroutine(sphereToChange, addChange, moveType));
+        StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
         return sphereColors;
     }
 
-    private System.Collections.IEnumerator RotationalOneDirCoroutine(int sphereToChange, bool addChange, RingMovementType moveType)
+    private System.Collections.IEnumerator LinearMovementCoroutine(int sphereToChange, bool addChange)
     {
         canClick = false;
         trialActive = true;
         // Only blink if blinkSpheres is enabled
         if (blinkSpheres)
         {
-            // Always blink Ring 2 (middle ring) since only Ring 2 spheres are selectable
-            if (numberOfRings == 3 && middleSpheres != null)
-                yield return StartCoroutine(BlinkRing(middleSpheres));
-            else if (numberOfRings < 3)
-            {
-                // Legacy fallback for 2-ring or 1-ring systems
-                GameObject[] ringToBlink = changeOuterRingSphere ? outerSpheres : innerSpheres;
-                if (ringToBlink != null)
-                    yield return StartCoroutine(BlinkRing(ringToBlink));
-            }
+            // Blink the single ring
+            if (spheres != null)
+                yield return StartCoroutine(BlinkRing(spheres));
         }
             
         yield return new WaitForSeconds(movementStartDelay);
@@ -1857,67 +1565,10 @@ public class GameManager : MonoBehaviour
         expectedMotionStopTime = Time.time + trialLength;
 
         float elapsedTime = 0f;
-        float currentAngleInner = 0f;
-        float currentAngleOuter = 0f;
-        int direction = Random.Range(0, 2) == 0 ? 1 : -1;
-        float innerSpeed = rotationSpeed * direction;
-        float outerSpeed = (separateOuterRingChangeMagnitudes ? outerRingRotationSpeed : rotationSpeed) * direction;
+        float currentProgress = 0f; // Progress from 0 (start) to 1 (end) for the ring
 
-        // Configuration-aware movement logic
-        bool moveInner = false;
-        bool moveOuter = false;
-        
-        if (numberOfRings == 3)
-        {
-            if (currentRingConfig == RingConfiguration.Config1)
-            {
-                // Config1: Ring 2 & 3 active, Ring 1 inactive
-                // "Inner" trials = Ring 2, "Outer" trials = Ring 3, "Both" trials = Ring 2 & 3
-                switch (moveType)
-                {
-                    case RingMovementType.Inner:
-                        moveInner = true;  // Ring 2 (middle) acts as "inner" in Config1
-                        moveOuter = false;
-                        break;
-                    case RingMovementType.Outer:
-                        moveInner = false;
-                        moveOuter = true;  // Ring 3 (outer) acts as "outer" in Config1
-                        break;
-                    case RingMovementType.Both:
-                        moveInner = true;  // Ring 2 (middle)
-                        moveOuter = true;  // Ring 3 (outer)
-                        break;
-                }
-            }
-            else if (currentRingConfig == RingConfiguration.Config2)
-            {
-                // Config2: Ring 1 & 2 active, Ring 3 inactive
-                // "Inner" trials = Ring 1, "Outer" trials = Ring 2, "Both" trials = Ring 1 & 2
-                switch (moveType)
-                {
-                    case RingMovementType.Inner:
-                        moveInner = true;  // Ring 1 (inner) acts as "inner" in Config2
-                        moveOuter = false;
-                        break;
-                    case RingMovementType.Outer:
-                        moveInner = false;
-                        moveOuter = true;  // Ring 2 (middle) acts as "outer" in Config2
-                        break;
-                    case RingMovementType.Both:
-                        moveInner = true;  // Ring 1 (inner)
-                        moveOuter = true;  // Ring 2 (middle)
-                        break;
-                }
-            }
-        }
-        else
-        {
-            // Legacy 2-ring or 1-ring system
-            moveInner = (moveType == RingMovementType.Inner || moveType == RingMovementType.Both);
-            moveOuter = (moveType == RingMovementType.Outer || moveType == RingMovementType.Both);
-        }
-        
-        Debug.Log($"[RotationalOneDirCoroutine] moveType: {moveType}, Config: {currentRingConfig}, moveInner: {moveInner}, moveOuter: {moveOuter}");
+        // Single ring system - always move the only ring
+        Debug.Log($"[LinearMovementCoroutine] Moving single ring towards user");
 
         bool changeApplied = false;
         bool useTwoDir = false;
@@ -1934,32 +1585,16 @@ public class GameManager : MonoBehaviour
         while (elapsedTime < trialLength && trialActive)
         {
             float deltaTime = Time.deltaTime;
-            currentAngleInner += moveInner ? innerSpeed * deltaTime : 0f;
-            currentAngleOuter += moveOuter ? outerSpeed * deltaTime : 0f;
             
-            // Update sphere positions based on ring configuration and movement type
-            if (numberOfRings == 3)
-            {
-                if (currentRingConfig == RingConfiguration.Config1)
-                {
-                    // Config1: Ring 2 & 3 active, Ring 1 inactive
-                    // For this config: Ring 2 acts as "inner", Ring 3 acts as "outer"
-                    // Make single call to prevent inactive ring rotation
-                    UpdateSpherePositionsByRotation(currentAngleInner, moveInner, moveOuter, currentAngleOuter);
-                }
-                else if (currentRingConfig == RingConfiguration.Config2)
-                {
-                    // Config2: Ring 1 & 2 active, Ring 3 inactive
-                    // For this config: Ring 1 acts as "inner", Ring 2 acts as "outer"
-                    // Make single call to prevent inactive ring rotation
-                    UpdateSpherePositionsByRotation(currentAngleInner, moveInner, moveOuter, currentAngleOuter);
-                }
-            }
-            else
-            {
-                // Legacy 2-ring or 1-ring system
-                UpdateSpherePositionsByRotation(currentAngleInner, moveInner, moveOuter, currentAngleOuter);
-            }
+            // Update movement progress (0 to 1 over the trial length)
+            float progressDelta = deltaTime / trialLength;
+            currentProgress += progressDelta;
+            
+            // Clamp progress to [0, 1]
+            currentProgress = Mathf.Clamp01(currentProgress);
+            
+            // Update sphere positions for single ring
+            UpdateSpherePositionsByLinearMovement(currentProgress, true, false, 0f);
             
             elapsedTime += deltaTime;
 
@@ -1970,19 +1605,12 @@ public class GameManager : MonoBehaviour
                 StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {
                     if (!changeApplied)
                     {
-                        // Always select from Ring 2 (middle ring) since only Ring 2 spheres are selectable
+                        // Select from the single ring
                         GameObject selectedSphere = null;
                         
-                        if (numberOfRings == 3 && middleSpheres != null && sphereToChange >= 0 && sphereToChange < middleSpheres.Length)
+                        if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
                         {
-                            selectedSphere = middleSpheres[sphereToChange];
-                        }
-                        else if (numberOfRings < 3)
-                        {
-                            // Legacy 2-ring or 1-ring system fallback
-                            GameObject[] targetArray = changeOuterRingSphere ? outerSpheres : innerSpheres;
-                            if (targetArray != null && sphereToChange >= 0 && sphereToChange < targetArray.Length)
-                                selectedSphere = targetArray[sphereToChange];
+                            selectedSphere = spheres[sphereToChange];
                         }
                         
                         if (selectedSphere != null)
@@ -1993,12 +1621,7 @@ public class GameManager : MonoBehaviour
                             changeApplied = true;
                             changeTime = Time.time;
                             canClick = true;
-                            if (useTwoDir)
-                            {
-                                direction *= -1;
-                                innerSpeed = rotationSpeed * direction;
-                                outerSpeed = (separateOuterRingChangeMagnitudes ? outerRingRotationSpeed : rotationSpeed) * direction;
-                            }
+                            // Note: Linear movement continues in the same direction (towards user)
                         }
                     }
                 }));
@@ -2023,8 +1646,8 @@ public class GameManager : MonoBehaviour
 
     private System.Collections.IEnumerator RotationalTwoDirCoroutine(int sphereToChange, bool addChange, RingMovementType moveType)
     {
-        // This coroutine is now identical to RotationalOneDirCoroutine, so just call it
-        yield return StartCoroutine(RotationalOneDirCoroutine(sphereToChange, addChange, moveType));
+        // This coroutine is now identical to LinearMovementCoroutine, so just call it
+        yield return StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
     }
 
     /*private System.Collections.IEnumerator RotationalChangeAndMove(int sphereToChange, bool addChange, string trialType)
@@ -2115,695 +1738,122 @@ public class GameManager : MonoBehaviour
     }
 
     // Helper for updating sphere positions by rotation
-    private void UpdateSpherePositionsByRotation(float rotationAngle, bool rotateInner, bool rotateOuter, float outerRotationAngle = 0f)
+    private void UpdateSpherePositionsByLinearMovement(float movementProgress, bool moveInner, bool moveOuter, float outerMovementProgress = 0f)
     {
-        // EMERGENCY: Add performance monitoring to prevent freezes
+        // Add performance monitoring
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
         // DEBUG: Log what's happening
-        Debug.Log($"[UpdateSpherePositions] Config: {currentRingConfig}, rotateInner: {rotateInner}, rotateOuter: {rotateOuter}, numberOfRings: {numberOfRings}");
-        Debug.Log($"[UpdateSpherePositions] changeOrientation: {changeOrientation}, ferrisWheelSpin: {ferrisWheelSpin}");
+        Debug.Log($"[UpdateSpherePositions] Single ring system - moveInner: {moveInner}, moveOuter: {moveOuter}");
+        Debug.Log($"[UpdateSpherePositions] changeOrientation: {changeOrientation}, individualSphereMovement: {individualSphereMovement}");
         
-        // EMERGENCY: Force parent rotation method to avoid trigonometric hang
-        /*if (changeOrientation && ferrisWheelSpin)
-        {
-            Debug.LogWarning("[UpdateSpherePositions] EMERGENCY: Forcing parent rotation method to prevent ferris wheel freeze!");
-        }*/
+        // Calculate current Z position based on movement progress (0 = start, 1 = end)
+        float currentInnerZ = startingZPosition - (movementProgress * movementDistance);
+        float currentOuterZ = startingZPosition - ((outerMovementProgress == 0f ? movementProgress : outerMovementProgress) * movementDistance);
         
-        // For orientation trials, check ferrisWheelSpin to determine rotation method
-        // For other trials (hue, value, size), always use parent rotation (more efficient)
-        if (changeOrientation && ferrisWheelSpin) // Per-sphere trig math method for orientation trials
+        // For orientation trials, check individualSphereMovement to determine movement method
+        // Single ring system - simplified movement logic
+        if (changeOrientation && individualSphereMovement) // Per-sphere movement method for orientation trials
         {
-            Debug.Log($"[UpdateSpherePositions] Using ferrisWheelSpin method for orientation trial");
-            // Handle 3-ring system with different configurations
-            if (numberOfRings == 3)
+            Debug.Log($"[UpdateSpherePositions] Using individualSphereMovement method for orientation trial (single ring)");
+            // Move all spheres in the single ring individually to preserve orientations
+            if (spheres != null)
             {
-                if (currentRingConfig == RingConfiguration.Config1)
+                for (int i = 0; i < spheres.Length; i++)
                 {
-                    // Config1: Ring 2 & 3 active, Ring 1 inactive
-                    // rotateInner (changeInnerRing trials) = rotate Ring 2 (middleSpheres)
-                    // rotateOuter (changeOuterRing trials) = rotate Ring 3 (outerSpheres)
-                    if (rotateInner && middleSpheres != null)
+                    if (spheres[i] != null)
                     {
-                        float middleOffset = Mathf.PI / ringTwoNumSpheres;
-                        for (int i = 0; i < middleSpheres.Length; i++)
-                        {
-                            float angle = i * Mathf.PI * 2 / ringTwoNumSpheres + Mathf.Deg2Rad * rotationAngle + middleOffset;
-                            float x = centerPoint.x + Mathf.Cos(angle) * ringTwoRadius;
-                            float y = centerPoint.y + Mathf.Sin(angle) * ringTwoRadius;
-                            middleSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                            // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                            // Each sphere keeps its initial rotation while only position moves around the ring
-                        }
-                    }
-                    if (rotateOuter && outerSpheres != null)
-                    {
-                        float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                        float outerOffset = Mathf.PI / ringThreeNumSpheres + (Mathf.PI / ringTwoNumSpheres);
-                        for (int i = 0; i < outerSpheres.Length; i++)
-                        {
-                            if (outerSpheres[i] == null) continue;
-                            float angle = i * Mathf.PI * 2 / ringThreeNumSpheres + Mathf.Deg2Rad * useAngle + outerOffset;
-                            float x = centerPoint.x + Mathf.Cos(angle) * ringThreeRadius;
-                            float y = centerPoint.y + Mathf.Sin(angle) * ringThreeRadius;
-                            outerSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                            // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                            // Each sphere keeps its initial rotation while only position moves around the ring
-                        }
-                    }
-                    // Ring 1 should NEVER rotate in Config1 - it's inactive
-                }
-                else if (currentRingConfig == RingConfiguration.Config2)
-                {
-                    // Config2: Ring 1 & 2 active, Ring 3 inactive
-                    // Ring 1 = "inner", Ring 2 = "outer"
-                    if (rotateInner && innerSpheres != null)
-                    {
-                        for (int i = 0; i < innerSpheres.Length; i++)
-                        {
-                            float angle = i * Mathf.PI * 2 / ringOneNumSpheres + Mathf.Deg2Rad * rotationAngle;
-                            float x = centerPoint.x + Mathf.Cos(angle) * ringOneRadius;
-                            float y = centerPoint.y + Mathf.Sin(angle) * ringOneRadius;
-                            innerSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                            // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                            // Each sphere keeps its initial rotation while only position moves around the ring
-                        }
-                    }
-                    if (rotateOuter && middleSpheres != null)
-                    {
-                        float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                        float middleOffset = Mathf.PI / ringTwoNumSpheres;
-                        for (int i = 0; i < middleSpheres.Length; i++)
-                        {
-                            if (middleSpheres[i] == null) continue;
-                            float angle = i * Mathf.PI * 2 / ringTwoNumSpheres + Mathf.Deg2Rad * useAngle + middleOffset;
-                            float x = centerPoint.x + Mathf.Cos(angle) * ringTwoRadius;
-                            float y = centerPoint.y + Mathf.Sin(angle) * ringTwoRadius;
-                            middleSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                            // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                            // Each sphere keeps its initial rotation while only position moves around the ring
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Legacy 2-ring or 1-ring system
-                if (rotateInner && innerSpheres != null)
-                {
-                    for (int i = 0; i < innerSpheres.Length; i++)
-                    {
-                        float angle = i * Mathf.PI * 2 / ringOneNumSpheres + Mathf.Deg2Rad * rotationAngle;
-                        float x = centerPoint.x + Mathf.Cos(angle) * ringOneRadius;
-                        float y = centerPoint.y + Mathf.Sin(angle) * ringOneRadius;
-                        innerSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                        // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                        // Each sphere keeps its initial rotation while only position moves around the ring
-                    }
-                }
-                if (rotateOuter && numberOfRings == 2 && outerSpheres != null)
-                {
-                    float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                    float outerOffset = Mathf.PI / ringThreeNumSpheres; // Keep outer spheres offset during rotation
-                    for (int i = 0; i < outerSpheres.Length; i++)
-                    {
-                        if (outerSpheres[i] == null) continue;
-                        float angle = i * Mathf.PI * 2 / ringThreeNumSpheres + Mathf.Deg2Rad * useAngle + outerOffset;
-                        float x = centerPoint.x + Mathf.Cos(angle) * ringThreeRadius;
-                        float y = centerPoint.y + Mathf.Sin(angle) * ringThreeRadius;
-                        outerSpheres[i].transform.position = new Vector3(x, y, centerPoint.z);
-                        // For ferrisWheelSpin, preserve each sphere's original orientation (no rotation change)
-                        // Each sphere keeps its initial rotation while only position moves around the ring
+                        // Keep original X,Y positions, only change Z
+                        Vector3 originalPos = spheres[i].transform.position;
+                        spheres[i].transform.position = new Vector3(originalPos.x, originalPos.y, currentInnerZ);
+                        // Preserve each sphere's original orientation during movement
                     }
                 }
             }
         }
-        else // Parent rotation method - used for all non-orientation trials and orientation trials when ferrisWheelSpin=false
+        else // Parent movement method - used for all non-orientation trials and orientation trials when individualSphereMovement=false
         {
-            // Handle 3-ring system with different configurations
-            if (numberOfRings == 3)
+            // Single ring system - move the ring parent to new Z position
+            Debug.Log($"[UpdateSpherePositions] Moving single ring to Z={currentInnerZ}");
+            if (ringParent != null)
             {
-                if (currentRingConfig == RingConfiguration.Config1)
-                {
-                    // Config1: Ring 2 & 3 active, Ring 1 inactive
-                    // SAFETY CHECK: Ring 3 should NOT be transparent in Config1 (skip for orientation trials)
-                    if (!changeOrientation && outerSpheres != null && outerSpheres.Length > 0 && outerSpheres[0] != null)
-                    {
-                        Renderer testRenderer = outerSpheres[0].GetComponent<Renderer>();
-                        if (testRenderer != null && testRenderer.material.color.a < 0.9f)
-                        {
-                            Debug.LogError($"[MISMATCH DETECTED] Config1 but Ring 3 is transparent (alpha={testRenderer.material.color.a})! This should not happen.");
-                        }
-                    }
-                    else if (changeOrientation)
-                    {
-                        Debug.Log($"[Config1] Skipping Ring 3 transparency check for orientation trial (striped materials don't have _Color property)");
-                    }
-                    
-                    // rotateInner (changeInnerRing trials) = rotate Ring 2 (middleRingParent)
-                    // rotateOuter (changeOuterRing trials) = rotate Ring 3 (outerRingParent)
-                    Debug.Log($"[Config1] rotateInner: {rotateInner}, rotateOuter: {rotateOuter}");
-                    
-                    if (rotateInner && middleRingParent != null)
-                    {
-                        Debug.Log($"[Config1] Rotating Ring 2 (middleRingParent) as INNER by {rotationAngle} degrees");
-                        middleRingParent.transform.rotation = Quaternion.Euler(0, 0, rotationAngle);
-                    }
-                    
-                    if (rotateOuter && outerRingParent != null)
-                    {
-                        float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                        Debug.Log($"[Config1] Rotating Ring 3 (outerRingParent) as OUTER by {useAngle} degrees");
-                        outerRingParent.transform.rotation = Quaternion.Euler(0, 0, useAngle);
-                    }
-                    
-                    // Ring 1 should NEVER rotate in Config1 - it's inactive
-                    Debug.Log($"[Config1] Ring 1 (innerRingParent) intentionally NOT rotated - inactive ring");
-                }
-                else if (currentRingConfig == RingConfiguration.Config2)
-                {
-                    // Config2: Ring 1 & 2 active, Ring 3 inactive
-                    // SAFETY CHECK: Ring 1 should NOT be transparent in Config2 (skip for orientation trials)
-                    if (!changeOrientation && innerSpheres != null && innerSpheres.Length > 0 && innerSpheres[0] != null)
-                    {
-                        Renderer testRenderer = innerSpheres[0].GetComponent<Renderer>();
-                        if (testRenderer != null && testRenderer.material.color.a < 0.9f)
-                        {
-                            Debug.LogError($"[MISMATCH DETECTED] Config2 but Ring 1 is transparent (alpha={testRenderer.material.color.a})! This should not happen.");
-                        }
-                    }
-                    else if (changeOrientation)
-                    {
-                        Debug.Log($"[Config2] Skipping Ring 1 transparency check for orientation trial (striped materials don't have _Color property)");
-                    }
-                    
-                    // For this config: Ring 1 acts as "inner", Ring 2 acts as "outer"
-                    // rotateInner = should Ring 1 (inner) rotate?
-                    // rotateOuter = should Ring 2 (middle) rotate?
-                    Debug.Log($"[Config2] rotateInner: {rotateInner}, rotateOuter: {rotateOuter}");
-                    if (rotateInner && innerRingParent != null)
-                    {
-                        Debug.Log($"[Config2] Rotating Ring 1 (innerRingParent) by {rotationAngle} degrees");
-                        innerRingParent.transform.rotation = Quaternion.Euler(0, 0, rotationAngle);
-                    }
-                    if (rotateOuter && middleRingParent != null)
-                    {
-                        float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                        Debug.Log($"[Config2] Rotating Ring 2 (middleRingParent) by {useAngle} degrees");
-                        middleRingParent.transform.rotation = Quaternion.Euler(0, 0, useAngle);
-                    }
-                    // Ring 3 (outerRingParent) should NEVER rotate in Config2 - it's inactive
-                    // Do not rotate outerRingParent under any circumstances in Config2
-                    Debug.Log($"[Config2] Ring 3 (outerRingParent) intentionally NOT rotated - inactive ring");
-                }
-            }
-            else
-            {
-                // Legacy 2-ring or 1-ring system
-                if (rotateInner && innerRingParent != null)
-                {
-                    innerRingParent.transform.rotation = Quaternion.Euler(0, 0, rotationAngle);
-                }
-                if (rotateOuter && numberOfRings == 2 && outerRingParent != null)
-                {
-                    float useAngle = outerRotationAngle == 0f ? rotationAngle : outerRotationAngle;
-                    outerRingParent.transform.rotation = Quaternion.Euler(0, 0, useAngle);
-                }
+                Vector3 pos = ringParent.transform.position;
+                ringParent.transform.position = new Vector3(pos.x, pos.y, currentInnerZ);
             }
         }
         
-        // EMERGENCY: Log performance to detect hangs
+        // Log performance to detect hangs
         stopwatch.Stop();
         if (stopwatch.ElapsedMilliseconds > 100)
         {
-            Debug.LogError($"[PERFORMANCE WARNING] UpdateSpherePositionsByRotation took {stopwatch.ElapsedMilliseconds}ms - potential freeze risk!");
+            Debug.LogError($"[PERFORMANCE WARNING] UpdateSpherePositionsByLinearMovement took {stopwatch.ElapsedMilliseconds}ms - potential freeze risk!");
         }
         else
         {
-            Debug.Log($"[PERFORMANCE] UpdateSpherePositionsByRotation completed in {stopwatch.ElapsedMilliseconds}ms");
+            Debug.Log($"[PERFORMANCE] UpdateSpherePositionsByLinearMovement completed in {stopwatch.ElapsedMilliseconds}ms");
         }
     }
 
-    // Create a set of spheres
+    // Create a set of spheres - Single ring system
     private string[] CreateRingOfSpheres(Vector3 center)
     {
         // ALWAYS generate fresh random colors for each trial (change blindness requires different colors)
-        Debug.Log("[GameManager] Generating fresh random spheres for this trial");
-        return CreateRingOfSpheresWithGeneration(center);
+        Debug.Log("[GameManager] Generating fresh random spheres for single ring");
+        return CreateSingleRingOfSpheres(center);
     }
     
-    // Create spheres with pre-calculated colors (fast path)
-    private string[] CreateRingOfSpheresWithColors(Vector3 center, string[] preCalculatedColors)
+    // Create single ring of spheres
+    private string[] CreateSingleRingOfSpheres(Vector3 center)
     {
-        Debug.Log($"[CreateRingOfSpheres] Starting sphere creation - ChangeType: {changeType}, numberOfRings: {numberOfRings}, Config: {currentRingConfig}");
+        Debug.Log($"[CreateSingleRingOfSpheres] Starting single ring creation - ChangeType: {changeType}");
         
-        // Destroy previous parents if they exist
-        if (innerRingParent != null) Destroy(innerRingParent);
-        if (outerRingParent != null) Destroy(outerRingParent);
-        if (middleRingParent != null) Destroy(middleRingParent);
+        // Destroy previous ring parent if it exists
+        if (ringParent != null) Destroy(ringParent);
         
-        // Create new ring parents with identity rotation to prevent jumps
-        innerRingParent = new GameObject("InnerRing");
-        innerRingParent.transform.position = center;
-        innerRingParent.transform.rotation = Quaternion.identity;
+        // Create new ring parent with identity rotation to prevent jumps
+        ringParent = new GameObject("Ring");
+        ringParent.transform.position = center;
+        ringParent.transform.rotation = Quaternion.identity;
         
-        if (numberOfRings == 3)
-        {
-            middleRingParent = new GameObject("MiddleRing");
-            middleRingParent.transform.position = center;
-            middleRingParent.transform.rotation = Quaternion.identity;
-        }
-        if (numberOfRings >= 2)
-        {
-            outerRingParent = new GameObject("OuterRing");
-            outerRingParent.transform.position = center;
-            outerRingParent.transform.rotation = Quaternion.identity;
-        }
+        // Allocate array for single ring
+        spheres = new GameObject[numberOfSpheres];
         
-        // Allocate arrays
-        if (numberOfRings == 3)
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-            middleSpheres = new GameObject[ringTwoNumSpheres];
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
-        else if (numberOfRings == 2)
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
-        else
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-        }
+        // Generate random colors for this trial
+        var sphereColors = GenerateRandomAttributes(numberOfSpheres);
         
-        // Create inner ring with pre-calculated colors
-        Debug.Log($"[CreateRingOfSpheresWithColors] Creating Ring 1 (innerSpheres) with config {currentRingConfig}");
-        for (int i = 0; i < ringOneNumSpheres; i++)
+        // Create the single ring of spheres
+        Debug.Log($"[CreateSingleRingOfSpheres] Creating {numberOfSpheres} spheres");
+        for (int i = 0; i < numberOfSpheres; i++)
         {
-            float angle = i * Mathf.PI * 2 / ringOneNumSpheres;
-            float x = center.x + Mathf.Cos(angle) * ringOneRadius;
-            float y = center.y + Mathf.Sin(angle) * ringOneRadius;
-            Vector3 position = new Vector3(x, y, center.z);
-            GameObject sphere = Instantiate(GetSpherePrefabForRing("inner"), position, Quaternion.identity);
+            float angle = i * Mathf.PI * 2 / numberOfSpheres;
+            float x = center.x + Mathf.Cos(angle) * ringRadius;
+            float y = center.y + Mathf.Sin(angle) * ringRadius;
+            Vector3 position = new Vector3(x, y, startingZPosition);
+            
+            // Get appropriate prefab for the trial type
+            GameObject prefab = changeOrientation ? stripedSpherePrefab : spherePrefab;
+            GameObject sphere = Instantiate(prefab, position, Quaternion.identity);
             sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-            sphere.name = $"inner_{i}";
+            sphere.name = $"sphere_{i}";
             
-            // Apply pre-calculated attribute
-            ApplyAttributeToSphere(sphere, preCalculatedColors[i]);
+            // Apply generated attributes
+            ApplyAttributeToSphere(sphere, sphereColors[i]);
             
-            // Handle inactive ring transparency and interaction
-            if (numberOfRings == 3 && currentRingConfig == RingConfiguration.Config1)
-            {
-                // Ring 1 is inactive
-                Debug.Log($"[CreateRingOfSpheres] Ring 1 sphere {i+1}: Setting transparency (Config1 - Ring 1 inactive)");
-                Renderer renderer = sphere.GetComponent<Renderer>();
-                if (renderer != null && !changeOrientation)
-                {
-                    // Only modify color for non-orientation trials (striped materials don't have _Color property)
-                    Color c = renderer.material.color;
-                    c.a = 1f - inactiveRingTransparency;
-                    renderer.material.color = c;
-                    SetMaterialTransparent(renderer);
-                }
-                else if (changeOrientation && renderer != null)
-                {
-                    // For orientation trials, use multiple approaches to indicate inactive state since striped material properties vary
-                    Debug.Log($"[CreateRingOfSpheres] Ring 1 orientation sphere {i+1}: Setting transparency for orientation trial (Config1 - Ring 1 inactive)");
-                    Debug.Log($"[CreateRingOfSpheres] inactiveRingTransparency = {inactiveRingTransparency}");
-                    float alphaValue = 1f - inactiveRingTransparency;
-                    Debug.Log($"[CreateRingOfSpheres] Calculated alphaValue = {alphaValue}");
-                    
-                    // Try multiple material properties that might control transparency
-                    if (renderer.material.HasProperty("_Alpha"))
-                    {
-                        renderer.material.SetFloat("_Alpha", alphaValue);
-                        Debug.Log($"[CreateRingOfSpheres] Set _Alpha to {alphaValue}");
-                    }
-                    else
-                    {
-                        Debug.Log($"[CreateRingOfSpheres] Material does NOT have _Alpha property");
-                    }
-                    
-                    if (renderer.material.HasProperty("_Color"))
-                    {
-                        Color originalColor = renderer.material.color;
-                        Debug.Log($"[CreateRingOfSpheres] Original _Color: {originalColor}");
-                        Color c = renderer.material.color;
-                        c.a = alphaValue;
-                        renderer.material.color = c;
-                        Debug.Log($"[CreateRingOfSpheres] Set _Color alpha to {alphaValue}, new color: {renderer.material.color}");
-                    }
-                    else
-                    {
-                        Debug.Log($"[CreateRingOfSpheres] Material does NOT have _Color property");
-                    }
-                    
-                    SetMaterialTransparent(renderer);
-                }
-                Collider col = sphere.GetComponent<Collider>();
-                if (col != null) col.enabled = false;
-            }
-            
-            DisableSphereInteraction(sphere);
-            sphere.transform.parent = innerRingParent.transform;
-            innerSpheres[i] = sphere;
-        }
-        // --- Middle ring (if 3 rings) ---
-        if (numberOfRings == 3)
-        {
-            Debug.Log($"[CreateRingOfSpheresWithColors] Creating Ring 2 (middleSpheres) with config {currentRingConfig}");
-            float middleOffset = Mathf.PI / ringTwoNumSpheres;
-            for (int i = 0; i < ringTwoNumSpheres; i++)
-            {
-                float angle = i * Mathf.PI * 2 / ringTwoNumSpheres + middleOffset;
-                float x = center.x + Mathf.Cos(angle) * ringTwoRadius;
-                float y = center.y + Mathf.Sin(angle) * ringTwoRadius;
-                Vector3 position = new Vector3(x, y, center.z);
-                GameObject sphere = Instantiate(GetSpherePrefabForRing("middle"), position, Quaternion.identity);
-                sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-                sphere.name = $"middle_{i}";
-                
-                // Apply pre-calculated attribute
-                ApplyAttributeToSphere(sphere, preCalculatedColors[ringOneNumSpheres + i]);
-                
-                // Ring 2 (middle) spheres are the only ones selectable by user - keep interactions enabled
-                sphere.transform.parent = middleRingParent.transform;
-                middleSpheres[i] = sphere;
-            }
-        }
-        // --- Outer ring ---
-        if (ringThreeNumSpheres > 0)
-        {
-            Debug.Log($"[CreateRingOfSpheresWithColors] Creating Ring 3 (outerSpheres) with config {currentRingConfig}");
-            float outerOffset = Mathf.PI / ringThreeNumSpheres;
-            if (numberOfRings == 3)
-            {
-                outerOffset += (Mathf.PI / ringTwoNumSpheres);
-            }
-            
-            for (int i = 0; i < ringThreeNumSpheres; i++)
-            {
-                float angle = i * Mathf.PI * 2 / ringThreeNumSpheres + outerOffset;
-                float x = center.x + Mathf.Cos(angle) * ringThreeRadius;
-                float y = center.y + Mathf.Sin(angle) * ringThreeRadius;
-                Vector3 position = new Vector3(x, y, center.z);
-                GameObject sphere = Instantiate(GetSpherePrefabForRing("outer"), position, Quaternion.identity);
-                sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-                sphere.name = $"outer_{i}";
-                
-                // Apply pre-calculated attribute
-                int idx = numberOfRings == 3 ? ringOneNumSpheres + ringTwoNumSpheres + i : ringOneNumSpheres + i;
-                ApplyAttributeToSphere(sphere, preCalculatedColors[idx]);
-                
-                // Check if Ring 3 should be inactive (Config2: Ring 1&2 active, Ring 3 inactive)
-                if (numberOfRings == 3 && currentRingConfig == RingConfiguration.Config2)
-                {
-                    // Ring 3 is inactive - set transparency and disable collider
-                    Debug.Log($"[CreateRingOfSpheres] Ring 3 sphere {i+1}: Setting transparency (Config2 - Ring 3 inactive)");
-                    Renderer renderer = sphere.GetComponent<Renderer>();
-                    if (renderer != null)
-                    {
-                        Color c = renderer.material.color;
-                        c.a = 1f - inactiveRingTransparency;
-                        renderer.material.color = c;
-                        SetMaterialTransparent(renderer);
-                    }
-                    Collider col = sphere.GetComponent<Collider>();
-                    if (col != null) col.enabled = false;
-                }
-                
-                // Ring 3 spheres are never selectable by user (only Ring 2 is selectable)
-                DisableSphereInteraction(sphere);
-                sphere.transform.parent = outerRingParent.transform;
-                outerSpheres[i] = sphere;
-            }
+            // All spheres are selectable in single ring system
+            sphere.transform.parent = ringParent.transform;
+            spheres[i] = sphere;
         }
         
-        return preCalculatedColors;
+        return sphereColors.ToArray();
     }
+    
     
     // Create spheres with real-time generation (fallback/original path)
     private string[] CreateRingOfSpheresWithGeneration(Vector3 center)
     {
-        // Destroy previous parents if they exist
-        if (innerRingParent != null) Destroy(innerRingParent);
-        if (outerRingParent != null) Destroy(outerRingParent);
-        if (middleRingParent != null) Destroy(middleRingParent);
-        
-        // Create new ring parents with identity rotation to prevent jumps
-        innerRingParent = new GameObject("InnerRing");
-        innerRingParent.transform.position = center;
-        innerRingParent.transform.rotation = Quaternion.identity;
-        
-        if (numberOfRings == 3)
-        {
-            middleRingParent = new GameObject("MiddleRing");
-            middleRingParent.transform.position = center;
-            middleRingParent.transform.rotation = Quaternion.identity;
-        }
-        if (numberOfRings >= 2)
-        {
-            outerRingParent = new GameObject("OuterRing");
-            outerRingParent.transform.position = center;
-            outerRingParent.transform.rotation = Quaternion.identity;
-        }
-        // Allocate arrays
-        if (numberOfRings == 3)
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-            middleSpheres = new GameObject[ringTwoNumSpheres];
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
-        else if (numberOfRings == 2)
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-            outerSpheres = new GameObject[ringThreeNumSpheres];
-        }
-        else
-        {
-            innerSpheres = new GameObject[ringOneNumSpheres];
-        }
-        // Build color array
-        int totalSpheres = ringOneNumSpheres + (numberOfRings == 3 ? ringTwoNumSpheres : 0) + (numberOfRings >= 2 ? ringThreeNumSpheres : 0);
-        string[] allColors = new string[totalSpheres];
-        
-        // Generate random attributes for each ring
-        
-        // Generate colors for inner ring
-        var innerColors = (genericInactiveRing && currentRingConfig == RingConfiguration.Config1) 
-            ? GenerateDefaultAttributes(ringOneNumSpheres)  // Ring 1 is inactive in Config1
-            : GenerateRandomAttributes(ringOneNumSpheres);
-        for (int i = 0; i < ringOneNumSpheres; i++)
-        {
-            allColors[i] = innerColors[i];
-        }
-        
-        // Generate colors for middle ring (if exists)
-        System.Collections.Generic.List<string> middleColors = null;
-        if (numberOfRings == 3)
-        {
-            middleColors = GenerateRandomAttributes(ringTwoNumSpheres); // Ring 2 is always active
-            for (int i = 0; i < ringTwoNumSpheres; i++)
-            {
-                allColors[ringOneNumSpheres + i] = middleColors[i];
-            }
-        }
-        
-        // Generate colors for outer ring
-        System.Collections.Generic.List<string> outerColors = null;
-        if (ringThreeNumSpheres > 0)
-        {
-            outerColors = (genericInactiveRing && currentRingConfig == RingConfiguration.Config2)
-                ? GenerateDefaultAttributes(ringThreeNumSpheres)  // Ring 3 is inactive in Config2
-                : GenerateRandomAttributes(ringThreeNumSpheres);
-            for (int i = 0; i < ringThreeNumSpheres; i++)
-            {
-                int idx = numberOfRings == 3 ? ringOneNumSpheres + ringTwoNumSpheres + i : ringOneNumSpheres + i;
-                allColors[idx] = outerColors[i];
-            }
-        }
-        
-        if (genericInactiveRing)
-        {
-            Debug.Log($"[GameManager] Generated colors with generic inactive ring (Config: {currentRingConfig}) - Inner: [{string.Join(", ", innerColors)}], Middle: [{(middleColors != null ? string.Join(", ", middleColors) : "none")}], Outer: [{(outerColors != null ? string.Join(", ", outerColors) : "none")}]");
-        }
-        else
-        {
-            Debug.Log($"[GameManager] Generated random colors - Inner: [{string.Join(", ", innerColors)}], Middle: [{(middleColors != null ? string.Join(", ", middleColors) : "none")}], Outer: [{(outerColors != null ? string.Join(", ", outerColors) : "none")}]");
-        }
-        
-        // --- Inner ring ---
-        for (int i = 0; i < ringOneNumSpheres; i++)
-        {
-            float angle = i * Mathf.PI * 2 / ringOneNumSpheres;
-            float x = center.x + Mathf.Cos(angle) * ringOneRadius;
-            float y = center.y + Mathf.Sin(angle) * ringOneRadius;
-            Vector3 position = new Vector3(x, y, center.z);
-            GameObject sphere = Instantiate(GetSpherePrefabForRing("inner"), position, Quaternion.identity);
-            sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-            sphere.name = $"inner_{i}";
-            
-            // Apply the pre-generated attribute to this sphere
-            ApplyAttributeToSphere(sphere, innerColors[i]);
-            
-            // Check if Ring 1 should be inactive (Config1: Ring 2&3 active, Ring 1 inactive)
-            if (numberOfRings == 3 && currentRingConfig == RingConfiguration.Config1)
-            {
-                // Ring 1 is inactive - set transparency and disable collider
-                Renderer renderer = sphere.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    Color c = renderer.material.color;
-                    c.a = 1f - inactiveRingTransparency;
-                    renderer.material.color = c;
-                    SetMaterialTransparent(renderer);
-                }
-                Collider col = sphere.GetComponent<Collider>();
-                if (col != null) col.enabled = false;
-            }
-            
-            // Ring 1 spheres are never selectable by user (only Ring 2 is selectable)
-            DisableSphereInteraction(sphere);
-            
-            sphere.transform.parent = innerRingParent.transform;
-            innerSpheres[i] = sphere;
-        }
-        // --- Middle ring (if 3 rings) ---
-        if (numberOfRings == 3)
-        {
-            System.Collections.Generic.List<string> middleAssignedColors = new System.Collections.Generic.List<string>();
-            float middleOffset = Mathf.PI / ringTwoNumSpheres; // Offset relative to inner ring
-            for (int i = 0; i < ringTwoNumSpheres; i++)
-            {
-                float angle = i * Mathf.PI * 2 / ringTwoNumSpheres + middleOffset;
-                float x = center.x + Mathf.Cos(angle) * ringTwoRadius;
-                float y = center.y + Mathf.Sin(angle) * ringTwoRadius;
-                Vector3 position = new Vector3(x, y, center.z);
-                GameObject sphere = Instantiate(GetSpherePrefabForRing("middle"), position, Quaternion.identity);
-                sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-                sphere.name = $"middle_{i}";
-                // Use pre-generated color from random list
-                string sphereColor = middleColors[i];
-                ApplyAttributeToSphere(sphere, sphereColor);
-                allColors[ringOneNumSpheres + i] = sphereColor;
-                
-                // Ring 2 (middle) spheres are the only ones selectable by user - keep interactions enabled
-                // No need to disable interaction components for Ring 2
-                sphere.transform.parent = middleRingParent.transform;
-                middleSpheres[i] = sphere;
-            }
-        }
-        // --- Outer ring (formerly passive ring, now always present if ringThreeNumSpheres > 0) ---
-        if (ringThreeNumSpheres > 0)
-        {
-            float outerOffset = Mathf.PI / ringThreeNumSpheres; // Offset relative to middle ring
-            if (numberOfRings == 3)
-            {
-                // Calculate additional offset so outer ring is offset from middle ring
-                outerOffset += (Mathf.PI / ringTwoNumSpheres);
-            }
-            System.Collections.Generic.List<string> outerAssignedColors = new System.Collections.Generic.List<string>();
-            for (int i = 0; i < ringThreeNumSpheres; i++)
-            {
-                float angle = i * Mathf.PI * 2 / ringThreeNumSpheres + outerOffset;
-                float x = center.x + Mathf.Cos(angle) * ringThreeRadius;
-                float y = center.y + Mathf.Sin(angle) * ringThreeRadius;
-                Vector3 position = new Vector3(x, y, center.z);
-                GameObject sphere = Instantiate(GetSpherePrefabForRing("outer"), position, Quaternion.identity);
-                sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
-                sphere.name = $"outer_{i}";
-                Renderer renderer = sphere.GetComponent<Renderer>();
-                
-                if (numberOfRings == 3)
-                {
-                    // Check if Ring 3 should be inactive (Config2: Ring 1&2 active, Ring 3 inactive)
-                    if (currentRingConfig == RingConfiguration.Config2)
-                    {
-                        // Ring 3 is inactive - assign random attributes but set transparency and disable collider
-                        string sphereColor = outerColors[i];
-                        ApplyAttributeToSphere(sphere, sphereColor);
-                        int idx = ringOneNumSpheres + ringTwoNumSpheres + i;
-                        allColors[idx] = sphereColor;
-                        
-                        // Set transparency after assigning attributes
-                        if (renderer != null && !changeOrientation)
-                        {
-                            // Only modify color for non-orientation trials (striped materials don't have _Color property)
-                            Color c = renderer.material.color;
-                            c.a = 1f - inactiveRingTransparency;
-                            renderer.material.color = c;
-                            SetMaterialTransparent(renderer);
-                        }
-                        else if (changeOrientation)
-                        {
-                            // For orientation trials, use multiple approaches to indicate inactive state since striped material properties vary
-                            Debug.Log($"[CreateRingOfSpheres] Ring 3 sphere {i+1}: Setting transparency for orientation trial (Config2 - Ring 3 inactive)");
-                            float alphaValue = 1f - inactiveRingTransparency;
-                            
-                            // Try multiple material properties that might control transparency
-                            if (renderer.material.HasProperty("_Alpha"))
-                            {
-                                renderer.material.SetFloat("_Alpha", alphaValue);
-                                Debug.Log($"[CreateRingOfSpheres] Set _Alpha to {alphaValue}");
-                            }
-                            if (renderer.material.HasProperty("_Color"))
-                            {
-                                Color c = renderer.material.color;
-                                c.a = alphaValue;
-                                renderer.material.color = c;
-                                Debug.Log($"[CreateRingOfSpheres] Set _Color alpha to {alphaValue}");
-                            }
-                            
-                            SetMaterialTransparent(renderer);
-                        }
-                        Collider col = sphere.GetComponent<Collider>();
-                        if (col != null) col.enabled = false;
-                    }
-                    else
-                    {
-                        // Ring 3 is active - assign random color
-                        string sphereColor = outerColors[i];
-                        ApplyAttributeToSphere(sphere, sphereColor);
-                        int idx = ringOneNumSpheres + ringTwoNumSpheres + i;
-                        allColors[idx] = sphereColor;
-                    }
-                    
-                    // Ring 3 spheres are never selectable by user (only Ring 2 is selectable)
-                    DisableSphereInteraction(sphere);
-                }
-                else
-                {
-                    // For 2-ring mode, Ring 3 behavior depends on configuration  
-                    // This should not normally happen with 3-ring system, but keeping for compatibility
-                    if (renderer != null)
-                    {
-                        Color c = renderer.material.color;
-                        c.a = 1f - inactiveRingTransparency;
-                        renderer.material.color = c;
-                        SetMaterialTransparent(renderer);
-                    }
-                    Collider col = sphere.GetComponent<Collider>();
-                    if (col != null) col.enabled = false;
-                    outerAssignedColors.Add("");
-                    int idx = ringOneNumSpheres + i;
-                    allColors[idx] = "";
-                    
-                    // Ring 3 spheres are never selectable by user (only Ring 2 is selectable)
-                    DisableSphereInteraction(sphere);
-                }
-                sphere.transform.parent = outerRingParent.transform;
-                outerSpheres[i] = sphere;
-            }
-        }
-        
-        // DEBUG: Verify all rings were created properly
-        Debug.Log($"[CreateRingOfSpheres] FINAL VERIFICATION - Trial Type: {changeType}");
-        Debug.Log($"[CreateRingOfSpheres] - innerSpheres: {(innerSpheres?.Length ?? 0)} spheres, middleSpheres: {(middleSpheres?.Length ?? 0)} spheres, outerSpheres: {(outerSpheres?.Length ?? 0)} spheres");
-        Debug.Log($"[CreateRingOfSpheres] - Ring parents - Inner: {(innerRingParent != null ? "EXISTS" : "NULL")}, Middle: {(middleRingParent != null ? "EXISTS" : "NULL")}, Outer: {(outerRingParent != null ? "EXISTS" : "NULL")}");
-        
-        return allColors;
-    } 
+        // Single ring system - just call the working method
+        return CreateSingleRingOfSpheres(center);
+    }
 
     // Helper method to set material to transparent mode
     private void SetMaterialTransparent(Renderer renderer)
@@ -2854,12 +1904,8 @@ public class GameManager : MonoBehaviour
             {
                 Color.RGBToHSV(renderer.material.color, out _, out float s, out float v);
                 
-                // Check if this sphere is in the inactive ring and should have zero saturation
+                // Single ring system - all spheres are active
                 float saturation = sphereSaturation;
-                if (genericInactiveRing && IsInactiveRingSphere(sphere))
-                {
-                    saturation = 0f; // Zero saturation for inactive ring when genericInactiveRing is true
-                }
                 
                 Color newColor = Color.HSVToRGB(value, saturation, sphereValue);
                 newColor.a = renderer.material.color.a; // Preserve alpha
@@ -2897,23 +1943,7 @@ public class GameManager : MonoBehaviour
     // Helper method to check if a sphere belongs to the inactive ring
     private bool IsInactiveRingSphere(GameObject sphere)
     {
-        if (!currentRingConfigSet || sphere == null) return false;
-        
-        string sphereName = sphere.name;
-        
-        // Config1: Ring 2 & 3 active (Ring 1 inactive)
-        // Config2: Ring 1 & 2 active (Ring 3 inactive)
-        if (currentRingConfig == RingConfiguration.Config1)
-        {
-            // Ring 1 (inner) is inactive in Config1
-            return sphereName.StartsWith("inner_");
-        }
-        else if (currentRingConfig == RingConfiguration.Config2)
-        {
-            // Ring 3 (outer) is inactive in Config2
-            return sphereName.StartsWith("outer_");
-        }
-        
+        // Single ring system - all spheres are active
         return false;
     }
 
@@ -2927,35 +1957,7 @@ public class GameManager : MonoBehaviour
             return spherePrefab;
         }
         
-        Debug.Log($"[GetSpherePrefabForRing] Orientation trial - ringType: {ringType}, genericInactiveRing: {genericInactiveRing}, currentRingConfig: {currentRingConfig}");
-        
-        // For orientation trials, check if genericInactiveRing is enabled and this is an inactive ring
-        if (genericInactiveRing)
-        {
-            bool isInactiveRing = false;
-            
-            if (currentRingConfig == RingConfiguration.Config1)
-            {
-                // Ring 1 (inner) is inactive in Config1
-                isInactiveRing = ringType == "inner";
-            }
-            else if (currentRingConfig == RingConfiguration.Config2)
-            {
-                // Ring 3 (outer) is inactive in Config2
-                isInactiveRing = ringType == "outer";
-            }
-            
-            Debug.Log($"[GetSpherePrefabForRing] genericInactiveRing=true, isInactiveRing: {isInactiveRing}");
-            
-            if (isInactiveRing)
-            {
-                // Use normal spheres for inactive ring when genericInactiveRing is true
-                Debug.Log($"[GetSpherePrefabForRing] Using spherePrefab for inactive ring {ringType}");
-                return spherePrefab;
-            }
-        }
-        
-        // Use striped spheres for active rings in orientation trials (or all rings when genericInactiveRing is false)
+        // For orientation trials, use striped spheres
         Debug.Log($"[GetSpherePrefabForRing] Using stripedSpherePrefab for {ringType}");
         
         // Safety check for null prefab
@@ -3011,16 +2013,9 @@ public class GameManager : MonoBehaviour
         // Only blink if blinkSpheres is enabled
         if (blinkSpheres)
         {
-            // Always blink Ring 2 (middle ring) since only Ring 2 spheres are selectable
-            if (numberOfRings == 3 && middleSpheres != null)
-                yield return StartCoroutine(BlinkRing(middleSpheres));
-            else if (numberOfRings < 3)
-            {
-                // Legacy fallback for 2-ring or 1-ring systems
-                GameObject[] ringToBlink = changeOuterRingSphere ? outerSpheres : innerSpheres;
-                if (ringToBlink != null)
-                    yield return StartCoroutine(BlinkRing(ringToBlink));
-            }
+            // Single ring system - blink the single ring
+            if (spheres != null)
+                yield return StartCoroutine(BlinkRing(spheres));
         }
             
         // Wait for half of trial length minus beep sequence duration
@@ -3033,16 +2028,10 @@ public class GameManager : MonoBehaviour
             // Always select from Ring 2 (middle ring) since only Ring 2 spheres are selectable
             GameObject selectedSphere = null;
             
-            if (numberOfRings == 3 && middleSpheres != null && sphereToChange >= 0 && sphereToChange < middleSpheres.Length)
+            // Single ring system - select from the single ring
+            if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
             {
-                selectedSphere = middleSpheres[sphereToChange];
-            }
-            else if (numberOfRings < 3)
-            {
-                // Legacy 2-ring or 1-ring system fallback
-                GameObject[] targetArray = changeOuterRingSphere ? outerSpheres : innerSpheres;
-                if (targetArray != null && sphereToChange >= 0 && sphereToChange < targetArray.Length)
-                    selectedSphere = targetArray[sphereToChange];
+                selectedSphere = spheres[sphereToChange];
             }
             
             if (selectedSphere != null)
@@ -3057,7 +2046,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"[StaticChange] Could not find selected sphere. sphereToChange={sphereToChange}, ring2 only selection, config={currentRingConfig}");
+                Debug.LogError($"[StaticChange] Could not find selected sphere. sphereToChange={sphereToChange}, single ring system");
                 canClick = true;
             }
         }));
@@ -3178,23 +2167,11 @@ public class GameManager : MonoBehaviour
     // Change the randomly selected sphere as needed
     private void ChangeSphere(GameObject sphere, bool addChange)
     {
-        // Determine if this is an outer ring sphere and if separate magnitudes are enabled
-        bool isOuter = false;
-        if (outerSpheres != null)
-        {
-            foreach (var s in outerSpheres)
-            {
-                if (s == sphere)
-                {
-                    isOuter = true;
-                    break;
-                }
-            }
-        }
-        float useHueChange = (separateOuterRingChangeMagnitudes && isOuter) ? outerRingHueChange : hueChangeHSV;
-        float useValueChange = (separateOuterRingChangeMagnitudes && isOuter) ? outerRingValueChange : valueChange;
-        float useSizeChange = (separateOuterRingChangeMagnitudes && isOuter) ? outerRingSizeChange : sizeChange;
-        float useOrientationChange = (separateOuterRingChangeMagnitudes && isOuter) ? outerRingOrientationChange : orientationChange;
+        // Single ring system - use standard change magnitudes
+        float useHueChange = hueChangeHSV;
+        float useValueChange = valueChange;
+        float useSizeChange = sizeChange;
+        float useOrientationChange = orientationChange;
         // If its not an orientation experiment
         if (!changeOrientation)
         {
@@ -3448,31 +2425,13 @@ public class GameManager : MonoBehaviour
     public void ShowBlackScreen(string message)
     {
         Debug.Log($"ShowBlackScreen called. blackScreen is {(blackScreen == null ? "NULL" : "ASSIGNED")}");
-        // Hide all inner spheres
-        if (innerSpheres != null)
+        // Hide all spheres in the single ring
+        if (spheres != null)
         {
-            foreach (GameObject sphere in innerSpheres)
+            foreach (GameObject sphere in spheres)
             {
                 if (sphere != null)
                     sphere.SetActive(false);
-            }
-        }
-        // Hide all outer spheres
-        if (outerSpheres != null)
-        {
-            foreach (GameObject outer in outerSpheres)
-            {
-                if (outer != null)
-                    outer.SetActive(false);
-            }
-        }
-        // Hide all middle spheres
-        if (middleSpheres != null)
-        {
-            foreach (GameObject middle in middleSpheres)
-            {
-                if (middle != null)
-                    middle.SetActive(false);
             }
         }
 
@@ -3493,28 +2452,13 @@ public class GameManager : MonoBehaviour
     // Function to hide the inbetween screen
     public void HideBlackScreen()
     {
-        // Reactivate spheres when hiding the black screen
-        foreach (GameObject sphere in innerSpheres)
+        // Reactivate spheres in the single ring when hiding the black screen
+        if (spheres != null)
         {
-            if (sphere != null)
-                sphere.SetActive(true);
-        }
-        // Reactivate outer ring spheres as well
-        if (outerSpheres != null)
-        {
-            foreach (GameObject outer in outerSpheres)
+            foreach (GameObject sphere in spheres)
             {
-                if (outer != null)
-                    outer.SetActive(true);
-            }
-        }
-        // Reactivate middle ring spheres as well
-        if (middleSpheres != null)
-        {
-            foreach (GameObject middle in middleSpheres)
-            {
-                if (middle != null)
-                    middle.SetActive(true);
+                if (sphere != null)
+                    sphere.SetActive(true);
             }
         }
 
@@ -3526,7 +2470,7 @@ public class GameManager : MonoBehaviour
     // Create headers for the results
     private void CreateHeaders()
     {
-        int totalSpheres = ringOneNumSpheres + (numberOfRings == 3 ? ringTwoNumSpheres : 0) + (numberOfRings >= 2 ? ringThreeNumSpheres : 0);
+        int totalSpheres = numberOfSpheres; // Single ring system
         headers = new string[31 + totalSpheres]; // Reduced by 1 for removed Default Hue column (32 - 1 = 31)
         headers[0] = "Participant";
         headers[1] = "Trial Number";
@@ -3564,23 +2508,10 @@ public class GameManager : MonoBehaviour
         headers[30] = "Sound Interval (s)";
         
         int idx = 31; // Updated index start for sphere colors
-        for (int i = 0; i < ringOneNumSpheres; i++)
+        // Single ring system - create headers for all spheres in the ring
+        for (int i = 0; i < numberOfSpheres; i++)
         {
-            headers[idx++] = $"Ring 1 - Sphere {i+1}";
-        }
-        if (numberOfRings == 3)
-        {
-            for (int i = 0; i < ringTwoNumSpheres; i++)
-            {
-                headers[idx++] = $"Ring 2 - Sphere {i+1}";
-            }
-        }
-        if (numberOfRings >= 2)
-        {
-            for (int i = 0; i < ringThreeNumSpheres; i++)
-            {
-                headers[idx++] = $"Ring 3 - Sphere {i+1}";
-            }
+            headers[idx++] = $"Sphere {i+1}";
         }
     }
 
@@ -3659,58 +2590,24 @@ public class GameManager : MonoBehaviour
         // Log the clicked sphere 
         Debug.Log($"Sphere {clickedSphere.name} clicked!"); 
 
-        // Determine if inner, middle, or outer, and index
-        bool isMiddle = false;
-        bool isOuter = false;
+        // Determine the index of the clicked sphere in the single ring
         int index = -1;
         
-        // Check middle ring first (Ring 2 - the selectable ring)
-        if (middleSpheres != null)
+        // Check the single ring of spheres
+        if (spheres != null)
         {
-            for (int i = 0; i < middleSpheres.Length; i++)
+            for (int i = 0; i < spheres.Length; i++)
             {
-                if (middleSpheres[i] == clickedSphere)
+                if (spheres[i] == clickedSphere)
                 {
-                    isMiddle = true;
                     index = i;
                     break;
                 }
             }
         }
         
-        // If not found in middle, check inner ring
-        if (index == -1)
-        {
-            for (int i = 0; i < innerSpheres.Length; i++)
-            {
-                if (innerSpheres[i] == clickedSphere)
-                {
-                    isOuter = false;
-                    index = i;
-                    break;
-                }
-            }
-        }
-        
-        // If not found in inner, check outer ring
-        if (index == -1 && outerSpheres != null)
-        {
-            for (int i = 0; i < outerSpheres.Length; i++)
-            {
-                if (outerSpheres[i] == clickedSphere)
-                {
-                    isOuter = true;
-                    index = i;
-                    break;
-                }
-            }
-        }
-        
-        // Set selectedSphere based on which ring the clicked sphere belongs to
-        if (isMiddle)
-            selectedSphere = (index + 1).ToString();
-        else
-            selectedSphere = isOuter ? $"outer_{index+1}" : $"inner_{index+1}";
+        // Set selectedSphere based on the index in the single ring
+        selectedSphere = (index + 1).ToString();
         SphereManager sphereManager = clickedSphere.GetComponent<SphereManager>(); 
         success = (sphereManager != null && sphereManager.isChanged) ? "true" : "false"; // Check if the clicked sphere was the changed one 
 
