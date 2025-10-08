@@ -128,10 +128,10 @@ public class GameManager : MonoBehaviour
     private float weightedHueChangeDelta = 4.0f;
     
     
-    [Header("Value Change Settings")]
+    [Header("Luminance Change Settings")]
     [Range(0f, 0.5f)] 
     [Tooltip("Luminance (brightness) change amount for sphere modifications.")]
-    public float valueChange = 0.2f;
+    public float luminanceChange = 0.2f;
     
     [Header("Size Change Settings")]
     [Tooltip("Size change amount for sphere scaling.")]
@@ -2336,7 +2336,7 @@ public class GameManager : MonoBehaviour
     {
         // Single ring system - use standard change magnitudes
         float useHueChange = hueChangeHSV;
-        float useValueChange = valueChange;
+        float useLuminanceChange = luminanceChange;
         float useSizeChange = sizeChange;
         float useOrientationChange = orientationChange;
         // If its not an orientation experiment
@@ -2422,19 +2422,19 @@ public class GameManager : MonoBehaviour
                 else if (changeLuminance)
                 {
                     float newValue;
-                    if (currentValue + useValueChange > 1f)
+                    if (currentValue + useLuminanceChange > 1f)
                     {
-                        newValue = Mathf.Clamp01(currentValue - useValueChange);
+                        newValue = Mathf.Clamp01(currentValue - useLuminanceChange);
                     }
-                    else if (currentValue - useValueChange < 0f)
+                    else if (currentValue - useLuminanceChange < 0f)
                     {
-                        newValue = Mathf.Clamp01(currentValue + useValueChange);
+                        newValue = Mathf.Clamp01(currentValue + useLuminanceChange);
                     }
                     else
                     {
                         newValue = addChange
-                            ? Mathf.Clamp01(currentValue + useValueChange)
-                            : Mathf.Clamp01(currentValue - useValueChange);
+                            ? Mathf.Clamp01(currentValue + useLuminanceChange)
+                            : Mathf.Clamp01(currentValue - useLuminanceChange);
                     }
                     originalResult = currentValue.ToString();
                     changedResult = newValue.ToString();
@@ -2537,12 +2537,12 @@ public class GameManager : MonoBehaviour
             else if (changeLuminance)
             {
                 float newValue;
-                if (currentValue + valueChange > 1f)
-                    newValue = Mathf.Clamp01(currentValue - valueChange);
-                else if (currentValue - valueChange < 0f)
-                    newValue = Mathf.Clamp01(currentValue + valueChange);
+                if (currentValue + luminanceChange > 1f)
+                    newValue = Mathf.Clamp01(currentValue - luminanceChange);
+                else if (currentValue - luminanceChange < 0f)
+                    newValue = Mathf.Clamp01(currentValue + luminanceChange);
                 else
-                    newValue = addChange ? Mathf.Clamp01(currentValue + valueChange) : Mathf.Clamp01(currentValue - valueChange);
+                    newValue = addChange ? Mathf.Clamp01(currentValue + luminanceChange) : Mathf.Clamp01(currentValue - luminanceChange);
 
                 targetColor = Color.HSVToRGB(currentHue, currentSaturation, newValue);
             }
