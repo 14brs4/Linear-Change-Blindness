@@ -1810,9 +1810,9 @@ public class GameManager : MonoBehaviour
         // Destroy previous ring parent if it exists
         if (ringParent != null) Destroy(ringParent);
         
-        // Create new ring parent with identity rotation to prevent jumps
+        // Create new ring parent at the starting Z position to prevent jumps
         ringParent = new GameObject("Ring");
-        ringParent.transform.position = center;
+        ringParent.transform.position = new Vector3(center.x, center.y, startingZPosition);
         ringParent.transform.rotation = Quaternion.identity;
         
         // Allocate array for single ring
@@ -1826,9 +1826,9 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < numberOfSpheres; i++)
         {
             float angle = i * Mathf.PI * 2 / numberOfSpheres;
-            float x = center.x + Mathf.Cos(angle) * ringRadius;
-            float y = center.y + Mathf.Sin(angle) * ringRadius;
-            Vector3 position = new Vector3(x, y, startingZPosition);
+            float x = Mathf.Cos(angle) * ringRadius;
+            float y = Mathf.Sin(angle) * ringRadius;
+            Vector3 position = new Vector3(x, y, 0f); // Relative to parent
             
             // Get appropriate prefab for the trial type
             GameObject prefab = changeOrientation ? stripedSpherePrefab : spherePrefab;
