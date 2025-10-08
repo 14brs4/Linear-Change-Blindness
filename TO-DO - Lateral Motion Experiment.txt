@@ -5,6 +5,7 @@
 - Pause after X number of trials, "Please take a break". Researcher must press key on keyboard (space bar?) for participant to continue.
 
 - Randomize entire way through, add a trial block feature where, e.g., if there are 160 trials, every 40 trials the experimenter must press the Enter key for the participant to continue.
+    - Add user variable: Trial Blocks (#). Functionality: If user sets # of Trials to x and # of Trial Blocks to y, every x/y trials (rounded up) user will be prompted to take a break.
 
 - See about using the other room.
 

@@ -4,13 +4,14 @@ using UnityEditor;
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables; 
 
 public enum ChangeType
 {
     Hue,
-    Value,
+    Luminance,
     Size,
     Orientation
 }
@@ -40,7 +41,7 @@ public class GameManager : MonoBehaviour
 
     // Helper properties for backward compatibility
     public bool changeHue => changeType == ChangeType.Hue;
-    public bool changeValue => changeType == ChangeType.Value;
+    public bool changeLuminance => changeType == ChangeType.Luminance;
     public bool changeSize => changeType == ChangeType.Size;
     public bool changeOrientation => changeType == ChangeType.Orientation;
     
@@ -57,6 +58,9 @@ public class GameManager : MonoBehaviour
     public float blinkDuration = 0.3f; // Adjustable blink timing for ring cue
     [CustomLabel("Movement Speed (units/s)")]
     public float movementSpeed = 2f; // Speed of linear movement towards user in units per second
+    [CustomLabel("Change Duration (s)")]
+    [Tooltip("Duration for gradual sphere changes. 0 = instantaneous. Change occurs from trialLength/2 - changeDuration/2 to trialLength/2 + changeDuration/2.")]
+    public float changeDuration = 0f;
     
     [Header("Linear Movement Settings")]
     [CustomLabel("Movement Distance (units)")]
@@ -69,7 +73,7 @@ public class GameManager : MonoBehaviour
         get
         {
             if (changeHue) return $"{participantName}_hue.csv";
-            if (changeValue) return $"{participantName}_value.csv";
+            if (changeLuminance) return $"{participantName}_luminance.csv";
             if (changeSize) return $"{participantName}_size.csv";
             if (changeOrientation) return $"{participantName}_orientation.csv";
             return $"{participantName}.csv";
@@ -126,7 +130,7 @@ public class GameManager : MonoBehaviour
     
     [Header("Value Change Settings")]
     [Range(0f, 0.5f)] 
-    [Tooltip("Value (brightness) change amount for sphere modifications.")]
+    [Tooltip("Luminance (brightness) change amount for sphere modifications.")]
     public float valueChange = 0.2f;
     
     [Header("Size Change Settings")]
@@ -203,6 +207,79 @@ public class GameManager : MonoBehaviour
 
     // List for storing objects
     [HideInInspector] public GameObject[] spheres; // Store references to the created spheres
+    private List<Coroutine> activeChangeCoroutines = new List<Coroutine>(); // Track running gradual change coroutines
+    private Coroutine activeBeepCoroutine = null; // Track the current beep sequence
+    private bool beepSequenceAborted = false; // Flag to abort beep sequence
+    
+    // Stop all running gradual change coroutines
+    private void StopAllActiveChangeCoroutines()
+    {
+        foreach (Coroutine coroutine in activeChangeCoroutines)
+        {
+            if (coroutine != null)
+                StopCoroutine(coroutine);
+        }
+        activeChangeCoroutines.Clear();
+    }
+    
+    // Stop the active beep sequence
+    private void StopBeepSequence()
+    {
+        if (activeBeepCoroutine != null)
+        {
+            beepSequenceAborted = true;
+            StopCoroutine(activeBeepCoroutine);
+            activeBeepCoroutine = null;
+            Debug.Log("[AudioCue] Beep sequence aborted by user interaction");
+        }
+    }
+    
+    // Enable clicking when the change starts (for static trials)
+    private System.Collections.IEnumerator EnableClickingWhenChangeStarts(float changeStartTime)
+    {
+        // Wait until the change starts
+        while (Time.time < changeStartTime)
+        {
+            yield return null;
+        }
+        
+        // Enable clicking when change begins
+        canClick = true;
+        Debug.Log("[StaticTrial] Clicking enabled - change has begun");
+    }
+    
+    // Update focal point to be centered between all spheres
+    private void UpdateFocalPointPosition()
+    {
+        if (focusPointText == null || spheres == null || spheres.Length == 0)
+            return;
+            
+        // Calculate the center position of all spheres
+        Vector3 centerPosition = Vector3.zero;
+        int validSphereCount = 0;
+        
+        for (int i = 0; i < spheres.Length; i++)
+        {
+            if (spheres[i] != null && spheres[i].transform != null)
+            {
+                centerPosition += spheres[i].transform.position;
+                validSphereCount++;
+            }
+        }
+        
+        if (validSphereCount > 0)
+        {
+            // Calculate average position (center of all spheres)
+            centerPosition /= validSphereCount;
+            
+            // Update focal point position to match sphere center (same X,Y plane)
+            if (focusPointText.rectTransform != null)
+            {
+                focusPointText.rectTransform.position = centerPosition;
+                Debug.Log($"[FocalPoint] Updated to center of spheres: {centerPosition}");
+            }
+        }
+    }
     [HideInInspector] public GameObject ringParent; // Parent object for the single ring
 
     [HideInInspector] public TMPro.TextMeshProUGUI focusPointText; // Assign in Inspector
@@ -306,7 +383,7 @@ public class GameManager : MonoBehaviour
         if (focusPointText != null)
         {
             focusPointText.enabled = false;
-            focusPointText.rectTransform.position = centerPoint;
+            // Note: Focal point position will be updated dynamically to follow sphere center
         }
 
         // Check if results file already exists or is locked at the start
@@ -459,7 +536,7 @@ public class GameManager : MonoBehaviour
         
         // Set Change Type
         if (changeHue) trialResults[2] = "Hue";
-        else if (changeValue) trialResults[2] = "Value";
+        else if (changeLuminance) trialResults[2] = "Luminance";
         else if (changeSize) trialResults[2] = "Size";
         else if (changeOrientation) trialResults[2] = "Orientation";
         else trialResults[2] = "";
@@ -649,7 +726,7 @@ public class GameManager : MonoBehaviour
                 return randomHue.ToString();
             }
         }
-        else if (changeValue)
+        else if (changeLuminance)
         {
             return GenerateHighQualityRandom().ToString();
         }
@@ -734,11 +811,11 @@ public class GameManager : MonoBehaviour
             var hues = result.Select(r => float.Parse(r) * 360f).ToArray();
             Debug.Log($"[RandomCheck] Ring with {sphereCount} spheres - Hues (degrees): [{string.Join(", ", hues.Select(h => h.ToString("F1")))}]");
         }
-        else if (changeValue)
+        else if (changeLuminance)
         {
             var values = result.Select(r => float.Parse(r)).ToArray();
-            Debug.Log($"[RandomCheck] Ring with {sphereCount} spheres - Values: [{string.Join(", ", values.Select(v => v.ToString("F3")))}]");
-            Debug.Log($"[QualityCheck] Value distribution - Min: {values.Min():F3}, Max: {values.Max():F3}, Range: {(values.Max() - values.Min()):F3}");
+            Debug.Log($"[RandomCheck] Ring with {sphereCount} spheres - Luminance: [{string.Join(", ", values.Select(v => v.ToString("F3")))}]");
+            Debug.Log($"[QualityCheck] Luminance distribution - Min: {values.Min():F3}, Max: {values.Max():F3}, Range: {(values.Max() - values.Min()):F3}");
         }
         else if (changeOrientation)
         {
@@ -769,9 +846,9 @@ public class GameManager : MonoBehaviour
         {
             return IsHueSetAcceptable(values);
         }
-        else if (changeValue)
+        else if (changeLuminance)
         {
-            return IsValueSetAcceptable(values);
+            return IsLuminanceSetAcceptable(values);
         }
         else if (changeOrientation)
         {
@@ -826,7 +903,7 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Check if value/brightness set has acceptable distribution (prevent bias toward light/dark)
     /// </summary>
-    private bool IsValueSetAcceptable(float[] values)
+    private bool IsLuminanceSetAcceptable(float[] values)
     {
         float min = values.Min();
         float max = values.Max();
@@ -1031,7 +1108,7 @@ public class GameManager : MonoBehaviour
         {
             return defaultHue.ToString();
         }
-        else if (changeValue)
+        else if (changeLuminance)
         {
             return sphereValue.ToString();
         }
@@ -1579,9 +1656,23 @@ public class GameManager : MonoBehaviour
         // else useTwoDir remains false (one direction)
 
         float halfTrial = trialLength / 2f;
+        
+        // Calculate change timing based on changeDuration
+        float effectiveChangeDuration = changeDuration;
+        float changeStart = halfTrial - (effectiveChangeDuration / 2f);
+        
+        // If change would start before trial begins, extend duration to fill entire trial
+        if (changeStart < 0f)
+        {
+            effectiveChangeDuration = trialLength;
+            changeStart = 0f;
+        }
+        
         float beepSequenceDuration = soundInterval * 4f; // 3 beeps + 1 interval before high beep
         float countdownStart = halfTrial - beepSequenceDuration;
         bool countdownStarted = false;
+        bool changeStarted = false;
+        
         while (elapsedTime < trialLength && trialActive)
         {
             float deltaTime = Time.deltaTime;
@@ -1598,32 +1689,45 @@ public class GameManager : MonoBehaviour
             
             elapsedTime += deltaTime;
 
-            // Start countdown beeps and change at the right time
+            // Start gradual change at the calculated time
+            if (!changeStarted && elapsedTime >= changeStart)
+            {
+                changeStarted = true;
+                if (!changeApplied)
+                {
+                    // Select from the single ring
+                    GameObject selectedSphere = null;
+                    
+                    if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
+                    {
+                        selectedSphere = spheres[sphereToChange];
+                    }
+                    
+                    if (selectedSphere != null)
+                    {
+                        SphereManager sphereManager = selectedSphere.GetComponent<SphereManager>();
+                        sphereManager.SetChanged(true);
+                        
+                        // Start gradual change coroutine
+                        float changeStartTime = Time.time;
+                        Coroutine changeCoroutine = StartCoroutine(GradualChangeSphere(selectedSphere, addChange, changeStartTime, effectiveChangeDuration));
+                        activeChangeCoroutines.Add(changeCoroutine);
+                        
+                        changeApplied = true;
+                        changeTime = changeStartTime;
+                        canClick = true;
+                        // Note: Linear movement continues in the same direction (towards user)
+                    }
+                }
+            }
+
+            // Start countdown beeps at the original time (for audio cues)
             if (!countdownStarted && elapsedTime >= countdownStart)
             {
                 countdownStarted = true;
-                StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {
-                    if (!changeApplied)
-                    {
-                        // Select from the single ring
-                        GameObject selectedSphere = null;
-                        
-                        if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
-                        {
-                            selectedSphere = spheres[sphereToChange];
-                        }
-                        
-                        if (selectedSphere != null)
-                        {
-                            SphereManager sphereManager = selectedSphere.GetComponent<SphereManager>();
-                            sphereManager.SetChanged(true);
-                            ChangeSphere(selectedSphere, addChange);
-                            changeApplied = true;
-                            changeTime = Time.time;
-                            canClick = true;
-                            // Note: Linear movement continues in the same direction (towards user)
-                        }
-                    }
+                activeBeepCoroutine = StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {
+                    // Beeps only - change is handled separately above
+                    activeBeepCoroutine = null; // Clear reference when completed
                 }));
             }
             yield return null;
@@ -1770,6 +1874,9 @@ public class GameManager : MonoBehaviour
                     }
                 }
             }
+            
+            // Update focal point to follow the center of the spheres
+            UpdateFocalPointPosition();
         }
         else // Parent movement method - used for all non-orientation trials and orientation trials when individualSphereMovement=false
         {
@@ -1781,6 +1888,9 @@ public class GameManager : MonoBehaviour
                 ringParent.transform.position = new Vector3(pos.x, pos.y, currentInnerZ);
             }
         }
+        
+        // Update focal point to follow the center of the spheres
+        UpdateFocalPointPosition();
         
         // Log performance to detect hangs
         stopwatch.Stop();
@@ -1806,6 +1916,12 @@ public class GameManager : MonoBehaviour
     private string[] CreateSingleRingOfSpheres(Vector3 center)
     {
         Debug.Log($"[CreateSingleRingOfSpheres] Starting single ring creation - ChangeType: {changeType}");
+        
+        // Stop any running gradual change coroutines from previous trial
+        StopAllActiveChangeCoroutines();
+        
+        // Stop any active beep sequence from previous trial
+        StopBeepSequence();
         
         // Destroy previous ring parent if it exists
         if (ringParent != null) Destroy(ringParent);
@@ -1843,6 +1959,9 @@ public class GameManager : MonoBehaviour
             sphere.transform.parent = ringParent.transform;
             spheres[i] = sphere;
         }
+        
+        // Update focal point to center of newly created spheres
+        UpdateFocalPointPosition();
         
         return sphereColors.ToArray();
     }
@@ -1912,9 +2031,9 @@ public class GameManager : MonoBehaviour
                 renderer.material.color = newColor;
             }
         }
-        else if (changeValue)
+        else if (changeLuminance)
         {
-            // Apply value/brightness (0-1) - Value trials should always use zero saturation (grayscale)
+            // Apply luminance/brightness (0-1) - Luminance trials should always use zero saturation (grayscale)
             Renderer renderer = sphere.GetComponent<Renderer>();
             if (renderer != null)
             {
@@ -2010,6 +2129,9 @@ public class GameManager : MonoBehaviour
         // For static trials, there's no motion, so set expectedMotionStopTime to 0
         expectedMotionStopTime = 0f;
         
+        // Record trial start time
+        float trialStartTime = Time.time;
+        
         // Only blink if blinkSpheres is enabled
         if (blinkSpheres)
         {
@@ -2017,45 +2139,90 @@ public class GameManager : MonoBehaviour
             if (spheres != null)
                 yield return StartCoroutine(BlinkRing(spheres));
         }
+        
+        // Calculate change timing
+        float halfTrial = trialLength / 2f;
+        float effectiveChangeDuration = changeDuration;
+        float changeStartFromTrialBeginning = halfTrial - (effectiveChangeDuration / 2f);
+        
+        // If change would start before the beginning of the trial, extend duration
+        if (changeStartFromTrialBeginning < 0f)
+        {
+            effectiveChangeDuration = trialLength;
+            changeStartFromTrialBeginning = 0f;
+        }
+        
+        // Start the gradual change at the correct time
+        GameObject selectedSphere = null;
+        if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
+        {
+            selectedSphere = spheres[sphereToChange];
+        }
+        
+        if (selectedSphere != null)
+        {
+            SphereManager sphereManager = selectedSphere.GetComponent<SphereManager>();
+            sphereManager.SetChanged(true);
             
-        // Wait for half of trial length minus beep sequence duration
-        float preChangeTime = trialLength / 2f;
+            float changeStartTime = trialStartTime + changeStartFromTrialBeginning;
+            Coroutine changeCoroutine = StartCoroutine(GradualChangeSphere(selectedSphere, addChange, changeStartTime, effectiveChangeDuration));
+            activeChangeCoroutines.Add(changeCoroutine);
+            
+            // Record change time and attendant motion stop time (static trial)
+            changeTime = changeStartTime;
+            attendantMotionStopTime = changeStartTime;
+            
+            // Enable clicking when change starts (not when beeps finish)
+            StartCoroutine(EnableClickingWhenChangeStarts(changeStartTime));
+        }
+        
+        // Wait for the appropriate time before starting beeps
         float beepSequenceDuration = soundInterval * 4f; // 3 beeps + 1 interval before high beep
-        if (preChangeTime > beepSequenceDuration)
-            yield return new WaitForSeconds(preChangeTime - beepSequenceDuration);
-        // Play beeps and make the change at the high beep
-        yield return StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {
-            // Always select from Ring 2 (middle ring) since only Ring 2 spheres are selectable
-            GameObject selectedSphere = null;
-            
-            // Single ring system - select from the single ring
-            if (spheres != null && sphereToChange >= 0 && sphereToChange < spheres.Length)
-            {
-                selectedSphere = spheres[sphereToChange];
-            }
-            
-            if (selectedSphere != null)
-            {
-                SphereManager sphereManager = selectedSphere.GetComponent<SphereManager>();
-                sphereManager.SetChanged(true);
-                ChangeSphere(selectedSphere, addChange);
-                // Record change time and attendant motion stop time (static trial)
-                changeTime = Time.time;
-                attendantMotionStopTime = changeTime;
-                canClick = true; // Enable clicking immediately after change
-            }
-            else
-            {
-                Debug.LogError($"[StaticChange] Could not find selected sphere. sphereToChange={sphereToChange}, single ring system");
-                canClick = true;
-            }
+        float timeUntilBeeps = halfTrial - beepSequenceDuration;
+        if (timeUntilBeeps > 0f)
+        {
+            float waitTime = timeUntilBeeps - (Time.time - trialStartTime);
+            if (waitTime > 0f)
+                yield return new WaitForSeconds(waitTime);
+        }
+        
+        // Play beeps (no change needed in callback since change already started)
+        activeBeepCoroutine = StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {
+            // Beeps finished - no additional action needed since canClick is already enabled
+            activeBeepCoroutine = null; // Clear reference when completed
         }));
+        
+        // Don't wait for beeps to finish - proceed independently
+        // Wait for the beep sequence to complete OR for the trial to be aborted
+        float beepStartTime = Time.time;
+        float totalBeepDuration = (3 + 1) * soundInterval; // 3 beeps + 1 high beep, each with interval
+        
+        while (activeBeepCoroutine != null && Time.time - beepStartTime < totalBeepDuration && trialActive)
+        {
+            yield return null;
+        }
+        
+        Debug.Log($"[StaticTrial] Beep sequence completed or aborted. trialActive: {trialActive}");
+        
         // Wait for another half trial length before the next iteration
-        yield return new WaitForSeconds(trialLength / 2f);
-        if (!trialActive) yield break;
+        float waitStartTime = Time.time;
+        float waitDuration = trialLength / 2f;
+        float elapsedWaitTime = 0f;
+        
+        while (elapsedWaitTime < waitDuration && trialActive)
+        {
+            elapsedWaitTime = Time.time - waitStartTime;
+            yield return null;
+        }
+        
+        if (!trialActive) 
+        {
+            Debug.Log("[StaticTrial] Trial ended by user interaction");
+            yield break;
+        }
+        
         // Record all motion stop time
         allMotionStopTime = Time.time;
-        // Remove canClick = true here
     }   
 
     // Make a random change and move spheres
@@ -2251,8 +2418,8 @@ public class GameManager : MonoBehaviour
                     }
                 }
 
-                // Check if the trial is a value change trial
-                else if (changeValue)
+                // Check if the trial is a luminance change trial
+                else if (changeLuminance)
                 {
                     float newValue;
                     if (currentValue + useValueChange > 1f)
@@ -2320,7 +2487,185 @@ public class GameManager : MonoBehaviour
             changedResult = newOrientation.ToString();
             sphere.transform.rotation = Quaternion.Euler(0, 0, newOrientation);
         }
-    } 
+    }
+
+    // Gradual change coroutine - applies changes over time instead of instantaneously
+    private System.Collections.IEnumerator GradualChangeSphere(GameObject sphere, bool addChange, float startTime, float duration)
+    {
+        if (sphere == null || duration <= 0f)
+        {
+            // Fallback to instantaneous change
+            ChangeSphere(sphere, addChange);
+            yield break;
+        }
+
+        // Store initial values
+        Renderer sphereRenderer = sphere.GetComponent<Renderer>();
+        if (sphereRenderer == null) yield break;
+
+        Color initialColor = sphereRenderer.material.color;
+        Vector3 initialScale = sphere.transform.localScale;
+        Quaternion initialRotation = sphere.transform.rotation;
+
+        // Calculate target values using the same logic as ChangeSphere
+        Color targetColor = initialColor;
+        Vector3 targetScale = initialScale;
+        Quaternion targetRotation = initialRotation;
+
+        // Calculate targets based on change type
+        if (!changeOrientation)
+        {
+            Color.RGBToHSV(initialColor, out float currentHue, out float currentSaturation, out float currentValue);
+            float currentSize = initialScale.x;
+
+            if (changeHue)
+            {
+                float adaptiveHueChange = weightedHueChange ? 
+                    GetCIEDE2000BasedHueChange(currentHue, currentSaturation, currentValue, hueChangeHSV) : 
+                    hueChangeHSV;
+
+                float newHue;
+                if (currentHue + adaptiveHueChange > 1f)
+                    newHue = Mathf.Clamp01(currentHue - adaptiveHueChange);
+                else if (currentHue - adaptiveHueChange < 0f)
+                    newHue = Mathf.Clamp01(currentHue + adaptiveHueChange);
+                else
+                    newHue = addChange ? (currentHue + adaptiveHueChange) % 1f : (currentHue - adaptiveHueChange + 1f) % 1f;
+
+                targetColor = Color.HSVToRGB(newHue, currentSaturation, currentValue);
+            }
+            else if (changeLuminance)
+            {
+                float newValue;
+                if (currentValue + valueChange > 1f)
+                    newValue = Mathf.Clamp01(currentValue - valueChange);
+                else if (currentValue - valueChange < 0f)
+                    newValue = Mathf.Clamp01(currentValue + valueChange);
+                else
+                    newValue = addChange ? Mathf.Clamp01(currentValue + valueChange) : Mathf.Clamp01(currentValue - valueChange);
+
+                targetColor = Color.HSVToRGB(currentHue, currentSaturation, newValue);
+            }
+            else if (changeSize)
+            {
+                float newSize = addChange ? (currentSize * (1 + sizeChange)) : (currentSize * (1 - sizeChange));
+                if (newSize > maxSize || newSize < minSize)
+                    newSize = addChange ? (currentSize * (1 - sizeChange)) : (currentSize * (1 + sizeChange));
+                
+                targetScale = new Vector3(newSize, newSize, newSize);
+            }
+        }
+        else if (changeOrientation)
+        {
+            float currentOrientation = sphere.transform.rotation.eulerAngles.z;
+            if (currentOrientation > 180) currentOrientation -= 360;
+
+            float newOrientation = addChange ? currentOrientation + orientationChange : currentOrientation - orientationChange;
+            if (newOrientation > 180 || newOrientation < -180)
+                newOrientation = addChange ? currentOrientation - orientationChange : currentOrientation + orientationChange;
+
+            targetRotation = Quaternion.Euler(0, 0, newOrientation);
+        }
+
+        // Wait until it's time to start the change
+        while (Time.time < startTime)
+        {
+            // Check if sphere was destroyed while waiting
+            if (sphere == null)
+                yield break;
+            yield return null;
+        }
+
+        // Apply gradual change over duration
+        float elapsedTime = 0f;
+        while (elapsedTime < duration)
+        {
+            // Check if sphere was destroyed during the change
+            if (sphere == null)
+                yield break;
+
+            float t = elapsedTime / duration;
+            
+            // Apply smooth interpolation with null checks
+            if (!changeOrientation)
+            {
+                if (changeHue || changeLuminance)
+                {
+                    // Check if renderer still exists
+                    if (sphereRenderer != null && sphereRenderer.material != null)
+                        sphereRenderer.material.color = Color.Lerp(initialColor, targetColor, t);
+                }
+                else if (changeSize)
+                {
+                    // Check if transform still exists
+                    if (sphere.transform != null)
+                        sphere.transform.localScale = Vector3.Lerp(initialScale, targetScale, t);
+                }
+            }
+            else
+            {
+                // Check if transform still exists
+                if (sphere.transform != null)
+                    sphere.transform.rotation = Quaternion.Lerp(initialRotation, targetRotation, t);
+            }
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // Ensure final values are exactly set (with null checks)
+        if (sphere != null)
+        {
+            if (!changeOrientation)
+            {
+                if (changeHue || changeLuminance)
+                {
+                    if (sphereRenderer != null && sphereRenderer.material != null)
+                        sphereRenderer.material.color = targetColor;
+                }
+                else if (changeSize)
+                {
+                    if (sphere.transform != null)
+                        sphere.transform.localScale = targetScale;
+                }
+            }
+            else
+            {
+                if (sphere.transform != null)
+                    sphere.transform.rotation = targetRotation;
+            }
+        }
+
+        // Update the stored results for logging
+        if (changeHue)
+        {
+            Color.RGBToHSV(initialColor, out float origHue, out _, out _);
+            Color.RGBToHSV(targetColor, out float newHue, out _, out _);
+            originalResult = origHue.ToString();
+            changedResult = newHue.ToString();
+        }
+        else if (changeLuminance)
+        {
+            Color.RGBToHSV(initialColor, out _, out _, out float origValue);
+            Color.RGBToHSV(targetColor, out _, out _, out float newValue);
+            originalResult = origValue.ToString();
+            changedResult = newValue.ToString();
+        }
+        else if (changeSize)
+        {
+            originalResult = initialScale.x.ToString();
+            changedResult = targetScale.x.ToString();
+        }
+        else if (changeOrientation)
+        {
+            float origOrientation = initialRotation.eulerAngles.z;
+            if (origOrientation > 180) origOrientation -= 360;
+            float newOrientation = targetRotation.eulerAngles.z;
+            if (newOrientation > 180) newOrientation -= 360;
+            originalResult = origOrientation.ToString();
+            changedResult = newOrientation.ToString();
+        }
+    }
 
     // Helper function to apply CIEDE2000-based perceptually uniform hue changes
     private float GetPerceptuallyUniformHueChange(float currentHue, float baseChange)
@@ -2580,6 +2925,9 @@ public class GameManager : MonoBehaviour
     { 
         sphereClickTime = Time.time; // Record click time immediately
 
+        // Stop any active beep sequence when user interacts
+        StopBeepSequence();
+
         // Ensure clicks are only processed when allowed 
         if (!canClick) 
         { 
@@ -2721,21 +3069,37 @@ public class GameManager : MonoBehaviour
     // --- Unified beep and change coroutine ---
     private System.Collections.IEnumerator PlayBeepsAndChange(int beepCount, float interval, System.Action onHighBeep)
     {
+        beepSequenceAborted = false; // Reset abort flag
+        
         if (audioSource == null || lowSound == null || highSound == null)
         {
             Debug.LogError($"[AudioCue] AudioSource or clips not assigned. audioSource: {(audioSource == null ? "NULL" : "OK")}, lowSound: {(lowSound == null ? "NULL" : "OK")}, highSound: {(highSound == null ? "NULL" : "OK")}");
             yield break;
         }
+        
         // Play countdown beeps
         for (int i = 0; i < beepCount; i++)
         {
+            if (beepSequenceAborted) yield break; // Check for abortion
+            
             audioSource.spatialBlend = 0f;
             audioSource.mute = false;
             audioSource.volume = 1f;
             audioSource.PlayOneShot(lowSound);
             Debug.Log($"[AudioCue] Countdown beep {i+1}");
-            yield return new WaitForSeconds(interval);
+            
+            // Wait for interval, checking for abortion
+            float elapsedTime = 0f;
+            while (elapsedTime < interval)
+            {
+                if (beepSequenceAborted) yield break;
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
         }
+        
+        if (beepSequenceAborted) yield break; // Final check before high beep
+        
         // Wait interval, then play high beep and trigger change
         audioSource.spatialBlend = 0f;
         audioSource.mute = false;
