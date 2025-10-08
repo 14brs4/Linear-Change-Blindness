@@ -35,6 +35,9 @@ public class GameManager : MonoBehaviour
 //Hello world!
     public int staticTrials = 20;
     public int movingTrials = 20;
+    [CustomLabel("Trial Blocks")]
+    [Tooltip("Number of blocks to divide trials into. After each block, user will be prompted to take a break.")]
+    public int trialBlocks = 1;
     
     private bool oneDirectionTrials = true;
     private bool twoDirectionTrials = false;
@@ -181,6 +184,12 @@ public class GameManager : MonoBehaviour
     
     // Tracking number of trials run
     private int trialNumber = 0;
+    
+    // Trial block tracking
+    private int currentBlockTrialCount = 0; // Trials completed in current block
+    private int trialsPerBlock = 0; // Calculated: total trials / trial blocks (rounded up)
+    private int currentBlock = 1; // Current block number (1-based)
+    private bool isInBreakScreen = false; // Flag to disable A button during break screens
 
     // Trial types for random selection
     private string[] trialTypes = { "Static", "Moving" };
@@ -280,6 +289,109 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+    
+    // Initialize trial block system
+    private void InitializeTrialBlocks()
+    {
+        int totalTrials = staticTrials + movingTrials;
+        
+        if (trialBlocks <= 0)
+        {
+            Debug.LogWarning("[TrialBlocks] Trial blocks must be greater than 0. Setting to 1.");
+            trialBlocks = 1;
+        }
+        
+        // Calculate trials per block (rounded up)
+        trialsPerBlock = Mathf.CeilToInt((float)totalTrials / trialBlocks);
+        
+        Debug.Log($"[TrialBlocks] Total trials: {totalTrials}, Trial blocks: {trialBlocks}, Trials per block: {trialsPerBlock}");
+        
+        // Reset counters
+        currentBlockTrialCount = 0;
+        currentBlock = 1;
+    }
+    
+    // Check if it's time for a break between trial blocks
+    private bool ShouldTakeBreak()
+    {
+        int totalTrialsCompleted = staticTrialsRun + movingTrialsRun;
+        int totalTrials = staticTrials + movingTrials;
+        
+        bool shouldBreak = currentBlockTrialCount >= trialsPerBlock && totalTrialsCompleted < totalTrials;
+        
+        Debug.Log($"[TrialBlocks] Block progress: {currentBlockTrialCount}/{trialsPerBlock}, Total progress: {totalTrialsCompleted}/{totalTrials}, Should break: {shouldBreak}");
+        
+        // Check if we've completed a full block and haven't finished all trials
+        return shouldBreak;
+    }
+    
+    // Show break screen and wait for spacebar
+    private void ShowBreakScreen()
+    {
+        int totalTrialsCompleted = staticTrialsRun + movingTrialsRun;
+        int totalTrials = staticTrials + movingTrials;
+        int trialsRemaining = totalTrials - totalTrialsCompleted;
+        
+        // Safety check - don't show break if experiment is actually complete
+        if (trialsRemaining <= 0)
+        {
+            Debug.LogWarning("[TrialBlocks] Break requested but no trials remaining. This shouldn't happen.");
+            return;
+        }
+        
+        string breakMessage = $"Block {currentBlock} of {trialBlocks} completed!\n\n" +
+                             $"Trials completed: {totalTrialsCompleted} / {totalTrials}\n" +
+                             $"Trials remaining: {trialsRemaining}\n\n" +
+                             "Take a break if needed.\n\n" +
+                             "Press SPACEBAR to continue to the next block.";
+        
+        ShowBlackScreen(breakMessage);
+        
+        // Disable A button during break screen (spacebar-only mode)
+        isInBreakScreen = true;
+        Debug.Log("[TrialBlocks] A button input DISABLED during break screen. Only spacebar will work.");
+        
+        Debug.Log($"[TrialBlocks] Break time! Block {currentBlock} completed. Waiting for spacebar...");
+        
+        // Start listening for spacebar input
+        StartCoroutine(WaitForSpacebarToContinue());
+    }
+    
+    // Coroutine to wait for spacebar input
+    private System.Collections.IEnumerator WaitForSpacebarToContinue()
+    {
+        while (true)
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                Debug.Log("[TrialBlocks] Spacebar pressed. Continuing to next block...");
+                
+                // Start next block
+                currentBlock++;
+                currentBlockTrialCount = 0;
+                
+                // Go directly to "Press A" message (don't hide black screen yet)
+                StartCoroutine(DelayedNextTrial());
+                yield break;
+            }
+            yield return null;
+        }
+    }
+    
+    // Show "Press A" message after break instead of immediately starting trial
+    private System.Collections.IEnumerator DelayedNextTrial()
+    {
+        yield return new WaitForSeconds(0.5f);
+        
+        // Re-enable A button input (exit break screen mode)
+        isInBreakScreen = false;
+        Debug.Log("[TrialBlocks] A button input RE-ENABLED. Normal trial continuation restored.");
+        
+        // Show the standard "Press A" message to continue
+        ShowBlackScreen("Press A on the VR Controller Button to Continue");
+        
+        // The Update() method will handle the A button press to start the actual trial
+    }
     [HideInInspector] public GameObject ringParent; // Parent object for the single ring
 
     [HideInInspector] public TMPro.TextMeshProUGUI focusPointText; // Assign in Inspector
@@ -346,6 +458,9 @@ public class GameManager : MonoBehaviour
         // Creating headers for results
         CreateHeaders();
         
+        // Calculate trials per block
+        InitializeTrialBlocks();
+        
         // Log CIEDE2000 color system status
         if (changeHue)
         {
@@ -404,7 +519,8 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         // Check for VR controller button press (mapped as "Submit") to start new trial
-        if (Input.GetButtonDown("Submit") && blackScreenUp && experimentRunning)
+        // BUT ignore A button presses when we're in a break screen (spacebar-only mode)
+        if (Input.GetButtonDown("Submit") && blackScreenUp && experimentRunning && !isInBreakScreen)
         {
             // Check if results file is still locked before starting trial
             string filePath = $"{resultsFolder}{participantFileName}";
@@ -2967,8 +3083,19 @@ public class GameManager : MonoBehaviour
         trialActive = false; // Stop all motion immediately
         Debug.Log("Interaction disabled (canClick set to false). Preparing for the next trial..."); 
 
-        // Show the black screen and wait for user input to start the next trial 
-        ShowBlackScreen("Press A on the VR controller to Continue to the Next Trial"); 
+        // Update trial block progress
+        currentBlockTrialCount++;
+        
+        // Check if it's time for a break
+        if (ShouldTakeBreak())
+        {
+            ShowBreakScreen();
+        }
+        else
+        {
+            // Show the black screen and wait for user input to start the next trial 
+            ShowBlackScreen("Press A on the VR controller to Continue to the Next Trial");
+        } 
     } 
 
     // End of sphere creation functions
