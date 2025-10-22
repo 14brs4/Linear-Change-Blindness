@@ -1,3 +1,6 @@
+- Create blocks, Set blocks to each have one type of motion each (Observer Motion, Object Motion, Static Motion)
+    - Experimenter sets order beforehand: Block 1 - Dropdown of options, Block 2 - Dropdown of options, etc.
+
 - Remove Rotation-related Columns from CSV: Attendant Ring, Ring Configuration, Ring States, etc.
 
 - See about using the other room.
