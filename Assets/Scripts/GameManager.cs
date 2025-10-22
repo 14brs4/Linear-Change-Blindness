@@ -16,6 +16,28 @@ public enum ChangeType
     Orientation
 }
 
+public enum MotionType
+{
+    [InspectorName("Observer Motion")]
+    ObserverMotion,
+    [InspectorName("Object Motion")]
+    ObjectMotion,
+    [InspectorName("Static")]
+    Static
+}
+
+/// <summary>
+/// GameManager for VR Change Blindness Experiment
+/// 
+/// Block System: Experiment consists of 3 sequential blocks, each with a configurable motion type:
+/// - Block 1, 2, 3: Each block contains only one motion type (Observer Motion, Object Motion, or Static)
+/// - Trials per block: Configurable number of trials in each block
+/// - Observer Motion: Currently identical to Object Motion (ready for future implementation)
+/// - Object Motion: Spheres move linearly toward the user
+/// - Static: Spheres remain stationary
+/// 
+/// The experiment progresses through Block 1 → Block 2 → Block 3 with breaks between blocks.
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     [HideInInspector] public XRInteractionManager interactionManager; // Reference to the XR Interaction Manager 
@@ -32,12 +54,22 @@ public class GameManager : MonoBehaviour
     [Tooltip("Select the type of change to detect in the experiment")]
     public ChangeType changeType = ChangeType.Hue;
     
-//Hello world!
-    public int staticTrials = 20;
-    public int movingTrials = 20;
-    [CustomLabel("Trial Blocks")]
-    [Tooltip("Number of blocks to divide trials into. After each block, user will be prompted to take a break.")]
-    public int trialBlocks = 1;
+    [Header("Block Configuration")]
+    [CustomLabel("Block 1")]
+    [Tooltip("Motion type for Block 1 trials")]
+    public MotionType block1Type = MotionType.Static;
+
+    [CustomLabel("Block 2")]
+    [Tooltip("Motion type for Block 2 trials")]
+    public MotionType block2Type = MotionType.ObjectMotion;
+
+    [CustomLabel("Block 3")]
+    [Tooltip("Motion type for Block 3 trials")]
+    public MotionType block3Type = MotionType.ObserverMotion;
+
+    [CustomLabel("Trials per Block")]
+    [Tooltip("Number of trials in each block")]
+    public int trialsPerBlock = 10;
     
     private bool oneDirectionTrials = true;
     private bool twoDirectionTrials = false;
@@ -185,14 +217,14 @@ public class GameManager : MonoBehaviour
     // Tracking number of trials run
     private int trialNumber = 0;
     
-    // Trial block tracking
+    // Block tracking
+    private int currentBlock = 1; // Current block number (1, 2, or 3)
     private int currentBlockTrialCount = 0; // Trials completed in current block
-    private int trialsPerBlock = 0; // Calculated: total trials / trial blocks (rounded up)
-    private int currentBlock = 1; // Current block number (1-based)
+    private int totalBlocks = 3; // Always 3 blocks
     private bool isInBreakScreen = false; // Flag to disable A button during break screens
 
-    // Trial types for random selection
-    private string[] trialTypes = { "Static", "Moving" };
+    // Trial types are now determined by block configuration instead of random selection
+    // private string[] trialTypes = { "Static", "Moving" }; // No longer used - blocks determine trial types
     // Note: Moving refers to linear movement towards the user
 
     // Results details
@@ -293,18 +325,8 @@ public class GameManager : MonoBehaviour
     // Initialize trial block system
     private void InitializeTrialBlocks()
     {
-        int totalTrials = staticTrials + movingTrials;
-        
-        if (trialBlocks <= 0)
-        {
-            Debug.LogWarning("[TrialBlocks] Trial blocks must be greater than 0. Setting to 1.");
-            trialBlocks = 1;
-        }
-        
-        // Calculate trials per block (rounded up)
-        trialsPerBlock = Mathf.CeilToInt((float)totalTrials / trialBlocks);
-        
-        Debug.Log($"[TrialBlocks] Total trials: {totalTrials}, Trial blocks: {trialBlocks}, Trials per block: {trialsPerBlock}");
+        Debug.Log($"[TrialBlocks] Initializing 3-block system with {trialsPerBlock} trials per block");
+        Debug.Log($"[TrialBlocks] Block 1: {block1Type}, Block 2: {block2Type}, Block 3: {block3Type}");
         
         // Reset counters
         currentBlockTrialCount = 0;
@@ -315,13 +337,13 @@ public class GameManager : MonoBehaviour
     private bool ShouldTakeBreak()
     {
         int totalTrialsCompleted = staticTrialsRun + movingTrialsRun;
-        int totalTrials = staticTrials + movingTrials;
+        int totalTrials = trialsPerBlock * totalBlocks;
         
-        bool shouldBreak = currentBlockTrialCount >= trialsPerBlock && totalTrialsCompleted < totalTrials;
+        bool shouldBreak = currentBlockTrialCount >= trialsPerBlock && currentBlock < totalBlocks;
         
-        Debug.Log($"[TrialBlocks] Block progress: {currentBlockTrialCount}/{trialsPerBlock}, Total progress: {totalTrialsCompleted}/{totalTrials}, Should break: {shouldBreak}");
+        Debug.Log($"[TrialBlocks] Block {currentBlock} progress: {currentBlockTrialCount}/{trialsPerBlock}, Total progress: {totalTrialsCompleted}/{totalTrials}, Should break: {shouldBreak}");
         
-        // Check if we've completed a full block and haven't finished all trials
+        // Check if we've completed the current block and there are more blocks remaining
         return shouldBreak;
     }
     
@@ -329,19 +351,22 @@ public class GameManager : MonoBehaviour
     private void ShowBreakScreen()
     {
         int totalTrialsCompleted = staticTrialsRun + movingTrialsRun;
-        int totalTrials = staticTrials + movingTrials;
+        int totalTrials = trialsPerBlock * totalBlocks;
         int trialsRemaining = totalTrials - totalTrialsCompleted;
         
         // Safety check - don't show break if experiment is actually complete
-        if (trialsRemaining <= 0)
+        if (trialsRemaining <= 0 || currentBlock >= totalBlocks)
         {
-            Debug.LogWarning("[TrialBlocks] Break requested but no trials remaining. This shouldn't happen.");
+            Debug.LogWarning("[TrialBlocks] Break requested but no blocks remaining. This shouldn't happen.");
             return;
         }
         
-        string breakMessage = $"Block {currentBlock} of {trialBlocks} completed!\n\n" +
+        string nextBlockType = GetBlockTypeString(GetNextBlockType());
+        
+        string breakMessage = $"Block {currentBlock} completed!\n\n" +
                              $"Trials completed: {totalTrialsCompleted} / {totalTrials}\n" +
                              $"Trials remaining: {trialsRemaining}\n\n" +
+                             $"Next block will be: {nextBlockType}\n\n" +
                              "Take a break if needed.\n\n" +
                              "Press SPACEBAR to continue to the next block.";
         
@@ -392,6 +417,42 @@ public class GameManager : MonoBehaviour
         
         // The Update() method will handle the A button press to start the actual trial
     }
+
+    // Get the motion type for the current block
+    private MotionType GetCurrentBlockType()
+    {
+        switch (currentBlock)
+        {
+            case 1: return block1Type;
+            case 2: return block2Type;
+            case 3: return block3Type;
+            default: return MotionType.Static; // Fallback
+        }
+    }
+
+    // Get the motion type for the next block
+    private MotionType GetNextBlockType()
+    {
+        switch (currentBlock + 1)
+        {
+            case 2: return block2Type;
+            case 3: return block3Type;
+            default: return MotionType.Static; // Fallback
+        }
+    }
+
+    // Convert motion type enum to readable string
+    private string GetBlockTypeString(MotionType motionType)
+    {
+        switch (motionType)
+        {
+            case MotionType.ObserverMotion: return "Observer Motion";
+            case MotionType.ObjectMotion: return "Object Motion";
+            case MotionType.Static: return "Static";
+            default: return "Unknown";
+        }
+    }
+
     [HideInInspector] public GameObject ringParent; // Parent object for the single ring
 
     [HideInInspector] public TMPro.TextMeshProUGUI focusPointText; // Assign in Inspector
@@ -587,7 +648,7 @@ public class GameManager : MonoBehaviour
         // Single ring system - no configuration needed
         Debug.Log("[GameManager] Ring configuration reset for new trial");
         
-        int totalTrials = staticTrials + movingTrials;
+        int totalTrials = trialsPerBlock * totalBlocks;
         if (trialNumber >= totalTrials)
         {
             experimentRunning = false;
@@ -666,22 +727,28 @@ public class GameManager : MonoBehaviour
         trialResults[9] = (sphereToChange + 1).ToString();
         bool addChange = Random.Range(0, 2) == 0;
 
-        // Build a list of available trial types
-        var availableTrialTypes = new System.Collections.Generic.List<string>();
-        if (staticTrialsRun < staticTrials) availableTrialTypes.Add("Static");
-        if (movingTrialsRun < movingTrials) availableTrialTypes.Add("Moving");
-
-        if (availableTrialTypes.Count == 0)
+        // Determine trial type based on current block instead of random selection
+        MotionType currentMotionType = GetCurrentBlockType();
+        string trialType;
+        
+        switch (currentMotionType)
         {
-            experimentRunning = false;
-            string filePath = $"{resultsFolder}{participantFileName}";
-            SaveResultsToCSV(filePath);
-            ShowBlackScreen("Experiment Complete");
-            Debug.Log("[GameManager] No available trial types left. Experiment complete.");
-            return;
+            case MotionType.Static:
+                trialType = "Static";
+                break;
+            case MotionType.ObjectMotion:
+                trialType = "Moving"; // Use existing moving trial logic
+                break;
+            case MotionType.ObserverMotion:
+                trialType = "ObserverMotion"; // For now, identical to moving
+                break;
+            default:
+                Debug.LogError($"[TrialBlocks] Unknown motion type: {currentMotionType}");
+                trialType = "Static"; // Fallback
+                break;
         }
-
-        string trialType = availableTrialTypes[Random.Range(0, availableTrialTypes.Count)];
+        
+        Debug.Log($"[TrialBlocks] Block {currentBlock}, Trial {currentBlockTrialCount + 1}/{trialsPerBlock}, Type: {GetBlockTypeString(currentMotionType)}");
         
         // Map internal trial type to CSV output format
         string movementTypeForCSV;
@@ -690,14 +757,11 @@ public class GameManager : MonoBehaviour
             case "Static":
                 movementTypeForCSV = "Static";
                 break;
-            case "InnerMoving":
-                movementTypeForCSV = "Inner Ring Only";
+            case "Moving":
+                movementTypeForCSV = "Object Motion";
                 break;
-            case "OuterMoving":
-                movementTypeForCSV = "Outer Ring Only";
-                break;
-            case "BothMoving":
-                movementTypeForCSV = "Both Moving";
+            case "ObserverMotion":
+                movementTypeForCSV = "Observer Motion";
                 break;
             default:
                 movementTypeForCSV = trialType;
@@ -754,10 +818,11 @@ public class GameManager : MonoBehaviour
             staticTrialsRun++;
             StartCoroutine(StaticChange(sphereToChange, addChange));
         }
-        else if (trialType == "Moving")
+        else if (trialType == "Moving" || trialType == "ObserverMotion")
         {
             trialNumber++;
             movingTrialsRun++;
+            // For now, ObserverMotion uses the same coroutine as Moving
             StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
         }
     }
@@ -783,14 +848,26 @@ public class GameManager : MonoBehaviour
         preGeneratedSphereToChange = Random.Range(0, numberOfSpheres);
         preGeneratedAddChange = Random.Range(0, 2) == 0;
         
-        // Determine next trial type
-        var availableTrialTypes = new System.Collections.Generic.List<string>();
-        if (staticTrialsRun < staticTrials) availableTrialTypes.Add("Static");
-        if (movingTrialsRun < movingTrials) availableTrialTypes.Add("Moving");
-        
-        if (availableTrialTypes.Count > 0)
+        // Determine next trial type based on current block
+        MotionType nextMotionType = GetCurrentBlockType();
+        switch (nextMotionType)
         {
-            preGeneratedTrialType = availableTrialTypes[Random.Range(0, availableTrialTypes.Count)];
+            case MotionType.Static:
+                preGeneratedTrialType = "Static";
+                break;
+            case MotionType.ObjectMotion:
+                preGeneratedTrialType = "Moving";
+                break;
+            case MotionType.ObserverMotion:
+                preGeneratedTrialType = "ObserverMotion";
+                break;
+            default:
+                preGeneratedTrialType = "Static";
+                break;
+        }
+        
+        if (!string.IsNullOrEmpty(preGeneratedTrialType))
+        {
             
             // Pre-generate sphere colors (this is the time-consuming part)
             // We can't actually create the GameObjects in background, but we can pre-calculate the colors
