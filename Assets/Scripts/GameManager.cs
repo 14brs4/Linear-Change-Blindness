@@ -115,10 +115,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Single ring system - only Ring 2 (middle ring) is used
-    private int numberOfRings = 1;
-    
-
     // Folder for saving results (always in the unity project folder)
     private string resultsFolder;
 
@@ -136,7 +132,6 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
     [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
     public float sphereSize = 0.7f;
-    [Range(0f, 1f)] private float inactiveRingTransparency = 0.5f;
     [Tooltip("When enabled, the inactive ring maintains default appearance (no randomization of hue, saturation, value, or size).")]
     public Vector3 centerPoint = Vector3.zero; // Center of the ring
     // --- Audio cue fields ---
@@ -674,7 +669,7 @@ public class GameManager : MonoBehaviour
         // Single ring system - no configuration needed
         
         trialResults = new string[headers.Length];
-        for (int i = 0; i < 29; i++)
+        for (int i = 0; i < 23; i++)  // Updated to 23 (21 + 2 new columns)
         {
             trialResults[i] = "";
         }
@@ -692,24 +687,19 @@ public class GameManager : MonoBehaviour
         trialResults[0] = participantName;
         trialResults[1] = (trialNumber + 1).ToString();
         
-        // Populate General Settings columns - all indices reduced by 1
-        trialResults[15] = trialLength.ToString();
-        trialResults[16] = movementStartDelay.ToString();
-        trialResults[17] = blinkSpheres.ToString();
-        trialResults[18] = blinkSpheres ? blinkDuration.ToString() : "";
-        trialResults[19] = movementSpeed.ToString();
-        trialResults[20] = numberOfSpheres.ToString();
-        trialResults[21] = "0"; // No second ring
-        trialResults[22] = "0"; // No third ring
-        trialResults[23] = ringRadius.ToString();
-        trialResults[24] = "0"; // No second ring radius
-        trialResults[25] = "0"; // No third ring radius
-        // Removed Default Hue column
-        trialResults[26] = sphereSaturation.ToString();
-        trialResults[27] = sphereValue.ToString();
-        trialResults[28] = sphereSize.ToString();
-        trialResults[29] = inactiveRingTransparency.ToString();
-        trialResults[30] = soundInterval.ToString();
+        // Populate General Settings columns - updated indices with new column order
+        trialResults[9] = movementStartDelay.ToString();    // Movement Start Delay (s)
+        trialResults[10] = trialLength.ToString();          // Trial Length (s) - moved after Movement Start Delay
+        // Response Time, Change Start Time, and Change End Time will be filled in SaveTrialResults
+        trialResults[14] = blinkSpheres.ToString();         // Blink Spheres (shifted by +2)
+        trialResults[15] = blinkSpheres ? blinkDuration.ToString() : ""; // Blink Duration (s)
+        trialResults[16] = movementSpeed.ToString();        // Rotation Speed (°/s)
+        trialResults[17] = numberOfSpheres.ToString();      // # of Spheres
+        trialResults[18] = ringRadius.ToString();           // Radius
+        trialResults[19] = sphereSaturation.ToString();     // Sphere Saturation
+        trialResults[20] = sphereValue.ToString();          // Sphere Value
+        trialResults[21] = sphereSize.ToString();           // Sphere Size
+        trialResults[22] = soundInterval.ToString();        // Sound Interval (s)
         
         // Set Change Type
         if (changeHue) trialResults[2] = "Hue";
@@ -721,10 +711,7 @@ public class GameManager : MonoBehaviour
         // Only single ring spheres are selectable
         int sphereToChange = Random.Range(0, numberOfSpheres);
         
-        // Single ring system - always use the single ring
-        trialResults[4] = "Single";
-        
-        trialResults[9] = (sphereToChange + 1).ToString();
+        trialResults[4] = (sphereToChange + 1).ToString();  // Changed Sphere (was index 9)
         bool addChange = Random.Range(0, 2) == 0;
 
         // Determine trial type based on current block instead of random selection
@@ -770,18 +757,6 @@ public class GameManager : MonoBehaviour
         
         trialResults[3] = movementTypeForCSV;
         
-        // Single ring system - always use configuration "1"
-        trialResults[5] = "1";
-        
-        // Single ring system - simplified ring states
-        string ring1State = "N/A"; // No Ring 1
-        string ring2State = trialType == "Static" ? "Static" : "Moving"; // Only Ring 2 exists
-        string ring3State = "N/A"; // No Ring 3
-        
-        trialResults[6] = ring1State;
-        trialResults[7] = ring2State;
-        trialResults[8] = ring3State;
-        
         // Generate spheres and execute trial
         string[] allColors = GenerateSpheresForTrial();
         ExecuteTrial(sphereToChange, addChange, trialType, allColors);
@@ -790,25 +765,17 @@ public class GameManager : MonoBehaviour
     // Execute a trial with given parameters and sphere colors
     private void ExecuteTrial(int sphereToChange, bool addChange, string trialType, string[] allColors)
     {
-        // Fill trialResults with all sphere colors, setting empty string for inactive rings
-        if (allColors != null && trialResults.Length > 31)
+        // Fill trialResults with all sphere colors
+        if (allColors != null && trialResults.Length > 23)
         {
-            int colorCount = Mathf.Min(allColors.Length, trialResults.Length - 31);
+            int colorCount = Mathf.Min(allColors.Length, trialResults.Length - 23);
             int colorIndex = 0;
             
-            // Ring 1 doesn't exist in single ring system - skip
-            
-            // Single ring spheres
-            for (int i = 0; i < numberOfSpheres && (31 + colorIndex) < trialResults.Length; i++)
+            // Single ring spheres - start at index 23
+            for (int i = 0; i < numberOfSpheres && (23 + colorIndex) < trialResults.Length; i++)
             {
-                trialResults[31 + colorIndex] = colorIndex < colorCount ? allColors[colorIndex] : "";
+                trialResults[23 + colorIndex] = colorIndex < colorCount ? allColors[colorIndex] : "";
                 colorIndex++;
-            }
-            
-            // Ring 3 spheres (outer ring)
-            if (numberOfRings >= 2)
-            {
-                // Ring 3 doesn't exist in single ring system - skip
             }
         }
         
@@ -3009,43 +2976,34 @@ public class GameManager : MonoBehaviour
     private void CreateHeaders()
     {
         int totalSpheres = numberOfSpheres; // Single ring system
-        headers = new string[31 + totalSpheres]; // Reduced by 1 for removed Default Hue column (32 - 1 = 31)
+        headers = new string[23 + totalSpheres]; // 21 + 2 new columns (Change Start Time and Change End Time)
         headers[0] = "Participant";
         headers[1] = "Trial Number";
         headers[2] = "Change Type";
         headers[3] = "Movement Type";
-        headers[4] = "Attendant Ring";
-        headers[5] = "Ring Configuration";
-        headers[6] = "Ring 1 State";
-        headers[7] = "Ring 2 State";
-        headers[8] = "Ring 3 State";
-        headers[9] = "Changed Sphere";
-        headers[10] = "Before Change";
-        headers[11] = "After Change";
-        headers[12] = "Selected Sphere";
-        headers[13] = "Success";
-        headers[14] = "Response Time (After change) (s)";
-        // Removed "Response Time (After motion stops)" column
+        headers[4] = "Changed Sphere";
+        headers[5] = "Before Change";
+        headers[6] = "After Change";
+        headers[7] = "Selected Sphere";
+        headers[8] = "Success";
+        headers[9] = "Movement Start Delay (s)";
+        headers[10] = "Trial Length (s)";
+        headers[11] = "Response Time (After Change Start) (s)";  // Renamed and moved
+        headers[12] = "Change Start Time (s)";                   // New column
+        headers[13] = "Change End Time (s)";                     // New column
         
-        // General Settings columns
-        headers[15] = "Trial Length (s)";
-        headers[16] = "Movement Start Delay (s)";
-        headers[17] = "Blink Spheres";
-        headers[18] = "Blink Duration (s)";
-        headers[19] = "Rotation Speed (°/s)";
-        headers[20] = "# of Spheres - Ring 1";
-        headers[21] = "# of Spheres - Ring 2";
-        headers[22] = "# of Spheres - Ring 3";
-        headers[23] = "Radius - Ring 1";
-        headers[24] = "Radius - Ring 2";
-        headers[25] = "Radius - Ring 3";
-        headers[26] = "Sphere Saturation";
-        headers[27] = "Sphere Value";
-        headers[28] = "Sphere Size";
-        headers[29] = "Inactive Ring Transparency";
-        headers[30] = "Sound Interval (s)";
+        // General Settings columns (shifted by +2 due to new columns)
+        headers[14] = "Blink Spheres";
+        headers[15] = "Blink Duration (s)";
+        headers[16] = "Rotation Speed (°/s)";
+        headers[17] = "# of Spheres";  // Renamed from "# of Spheres - Ring 1"
+        headers[18] = "Radius";        // Renamed from "Radius - Ring 1"
+        headers[19] = "Sphere Saturation";
+        headers[20] = "Sphere Value";
+        headers[21] = "Sphere Size";
+        headers[22] = "Sound Interval (s)";
         
-        int idx = 31; // Updated index start for sphere colors
+        int idx = 23; // Updated index start for sphere colors (21 + 2 new columns)
         // Single ring system - create headers for all spheres in the ring
         for (int i = 0; i < numberOfSpheres; i++)
         {
@@ -3057,11 +3015,13 @@ public class GameManager : MonoBehaviour
     public void SaveTrialResults()
     {
         // Save what the sphere change, picked sphere, and result of trial were
-        trialResults[10] = originalResult; // Before Change
-        trialResults[11] = changedResult;  // After Change
-        trialResults[12] = selectedSphere;
-        trialResults[13] = success;
-        trialResults[14] = changeTime > 0f ? (sphereClickTime - changeTime).ToString("F3") : "";
+        trialResults[5] = originalResult; // Before Change
+        trialResults[6] = changedResult;  // After Change
+        trialResults[7] = selectedSphere; // Selected Sphere
+        trialResults[8] = success;        // Success
+        trialResults[11] = changeTime > 0f ? (sphereClickTime - changeTime).ToString("F3") : ""; // Response Time (After Change Start)
+        trialResults[12] = changeTime > 0f ? changeTime.ToString("F3") : ""; // Change Start Time (s)
+        trialResults[13] = changeTime > 0f && changeDuration > 0f ? (changeTime + changeDuration).ToString("F3") : (changeTime > 0f ? changeTime.ToString("F3") : ""); // Change End Time (s)
         // Removed "Response Time (After motion stops)" column
         // Create a new array with an extra row
         string[][] newResults = new string[results.Length + 1][];
