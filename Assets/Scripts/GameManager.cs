@@ -363,7 +363,8 @@ public class GameManager : MonoBehaviour
                              $"Trials remaining: {trialsRemaining}\n\n" +
                              $"Next block will be: {nextBlockType}\n\n" +
                              "Take a break if needed.\n\n" +
-                             "Press SPACEBAR to continue to the next block.";
+                             "Press SPACEBAR to continue to the next block.\n" +
+                             "Press B on controller or C on keyboard to recenter view.";
         
         ShowBlackScreen(breakMessage);
         
@@ -446,6 +447,194 @@ public class GameManager : MonoBehaviour
             case MotionType.Static: return "Static";
             default: return "Unknown";
         }
+    }
+
+    // Store XR Origin for coordinate system recentering
+    private Transform xrOrigin = null;
+    
+    // Try to recenter VR tracking origin using Unity XR subsystems
+    private bool TryRecenterVRTrackingOrigin(Vector3 headPosition, Vector3 headForward)
+    {
+        try 
+        {
+            // Method 1: Try simple XR recenter approach
+            // This attempts to use any available VR recentering functionality
+            
+            // Check if we can use OpenXR or Oculus recentering
+            #if UNITY_XR_OPENXR
+            // OpenXR recentering would go here
+            Debug.Log("[Recenter] OpenXR detected but no native recenter implemented");
+            #endif
+            
+            // For now, return false to use XR Origin rotation method
+            Debug.Log("[Recenter] Native VR recentering not available, using XR Origin rotation");
+            return false;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[Recenter] VR tracking recenter failed: {e.Message}");
+            return false;
+        }
+    }
+    
+    // Recenter the view by adjusting the coordinate system itself
+    private void RecenterView()
+    {
+        // Find the main camera (should be the VR camera)
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogWarning("[Recenter] Main camera not found. Cannot recenter view.");
+            return;
+        }
+
+        // Find XR Origin if not already found
+        if (xrOrigin == null)
+        {
+            // Method 1: Try common XR Origin names
+            GameObject xrOriginGO = GameObject.Find("XR Origin") ?? 
+                                   GameObject.Find("XR Rig") ?? 
+                                   GameObject.Find("XROrigin") ?? 
+                                   GameObject.Find("XRRig") ??
+                                   GameObject.Find("XR Origin (Mobile)") ??
+                                   GameObject.Find("XR Origin (Room-Scale)") ??
+                                   GameObject.Find("XR Origin (Stationary)") ??
+                                   GameObject.Find("XRI_DefaultXRRig");
+            
+            // Method 2: Search by component type if names don't work
+            if (xrOriginGO == null)
+            {
+                // Try different possible XR Origin components
+                var xrInteractionManager = FindObjectOfType<XRInteractionManager>();
+                if (xrInteractionManager != null && xrInteractionManager.transform.parent != null)
+                {
+                    xrOriginGO = xrInteractionManager.transform.parent.gameObject;
+                    Debug.Log($"[Recenter] Found XR system via XRInteractionManager parent: {xrOriginGO.name}");
+                }
+            }
+            
+            // Method 3: Find by checking if Main Camera has XR Origin as parent
+            if (xrOriginGO == null && mainCamera != null)
+            {
+                Transform parent = mainCamera.transform.parent;
+                while (parent != null)
+                {
+                    if (parent.name.Contains("Origin") || parent.name.Contains("Rig") || parent.name.Contains("XR"))
+                    {
+                        xrOriginGO = parent.gameObject;
+                        Debug.Log($"[Recenter] Found potential XR Origin in camera hierarchy: {parent.name}");
+                        break;
+                    }
+                    parent = parent.parent;
+                }
+            }
+            
+            // Method 4: Search all GameObjects for XR-related names
+            if (xrOriginGO == null)
+            {
+                GameObject[] allObjects = FindObjectsOfType<GameObject>();
+                foreach (GameObject obj in allObjects)
+                {
+                    if ((obj.name.Contains("XR") && (obj.name.Contains("Origin") || obj.name.Contains("Rig"))) ||
+                        obj.name.Contains("CameraRig") || 
+                        obj.name.Contains("OVRCameraRig") ||
+                        obj.name.Contains("OculusRig"))
+                    {
+                        xrOriginGO = obj;
+                        Debug.Log($"[Recenter] Found XR system by search: {obj.name}");
+                        break;
+                    }
+                }
+            }
+            
+            if (xrOriginGO != null)
+            {
+                xrOrigin = xrOriginGO.transform;
+                Debug.Log($"[Recenter] Successfully found XR Origin: {xrOrigin.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[Recenter] Could not find any XR Origin/Rig. Listing all root objects for debugging:");
+                GameObject[] rootObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+                foreach (GameObject root in rootObjects)
+                {
+                    Debug.LogWarning($"[Recenter] Root object: {root.name}");
+                }
+            }
+        }
+
+        // Get current head position and rotation
+        Vector3 headPosition = mainCamera.transform.position;
+        Vector3 headForward = mainCamera.transform.forward;
+        
+        // METHOD 1: Try native VR tracking origin recenter (best approach)
+        if (TryRecenterVRTrackingOrigin(headPosition, headForward))
+        {
+            Debug.Log("[Recenter] Successfully recentered VR tracking origin. Unity world space now aligned with viewer.");
+            centerPoint = Vector3.zero; // Reset since tracking space is now aligned
+            return;
+        }
+        
+        // METHOD 2: If VR tracking recenter fails, try XR Origin rotation
+        if (xrOrigin != null)
+        {
+            // Calculate how much to rotate to align Unity forward (Z+) with head forward
+            Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
+            float angleToRotate = Vector3.SignedAngle(Vector3.forward, horizontalForward, Vector3.up);
+            
+            // Rotate the XR Origin to align Unity world space with head direction
+            xrOrigin.RotateAround(headPosition, Vector3.up, -angleToRotate);
+            
+            Debug.Log($"[Recenter] Rotated XR Origin by {-angleToRotate}° to align Unity world space with viewer direction");
+            Debug.Log($"[Recenter] Unity Z-axis now points toward viewer. Existing movement code will work unchanged.");
+            
+            // Reset centerPoint since coordinate system is now aligned
+            centerPoint = Vector3.zero;
+        }
+        else
+        {
+            // Fallback: Manual positioning (your original approach)
+            Debug.LogWarning("[Recenter] Using fallback manual positioning - this is less optimal");
+            
+            // Project the forward vector onto the horizontal plane
+            Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
+            
+            // Calculate the new center point based on where the user is looking
+            Vector3 newCenterPoint = headPosition + horizontalForward * ringRadius;
+            centerPoint = newCenterPoint;
+            
+            // Manual repositioning of objects...
+            Debug.Log($"[Recenter] Manual recentering - centerPoint set to: {centerPoint}");
+        }
+        
+        Debug.Log($"[Recenter] Recentering complete. Coordinate system now aligned with viewer.");
+    }
+
+    // Reposition existing spheres around the new center point
+    private void RepositionSpheres()
+    {
+        if (spheres == null || spheres.Length == 0) return;
+        
+        float angleStep = 360f / numberOfSpheres;
+        
+        for (int i = 0; i < spheres.Length; i++)
+        {
+            if (spheres[i] != null)
+            {
+                float angle = i * angleStep;
+                float angleInRadians = angle * Mathf.Deg2Rad;
+                
+                Vector3 spherePosition = new Vector3(
+                    centerPoint.x + Mathf.Cos(angleInRadians) * ringRadius,
+                    centerPoint.y,
+                    centerPoint.z + Mathf.Sin(angleInRadians) * ringRadius
+                );
+                
+                spheres[i].transform.position = spherePosition;
+            }
+        }
+        
+        Debug.Log($"[Recenter] Repositioned {spheres.Length} spheres around new center point.");
     }
 
     [HideInInspector] public GameObject ringParent; // Parent object for the single ring
@@ -546,7 +735,7 @@ public class GameManager : MonoBehaviour
 
         // Show initial black screen with VR controller instruction
         Debug.Log("[GameManager] Calling ShowBlackScreen at Start()");
-        ShowBlackScreen("Press A on the VR Controller Button to Begin");
+        ShowBlackScreen("Press A on the VR Controller Button to Begin\n\nPress B on controller or C on keyboard to recenter view");
         
         // Background generation disabled - each trial generates fresh random colors
         Debug.Log("[GameManager] Background generation disabled for fresh colors each trial");
@@ -589,6 +778,39 @@ public class GameManager : MonoBehaviour
             
             HideBlackScreen();
             StartNewTrial();
+        }
+
+        // Check for recentering input (B button on controller or C key on keyboard)
+        // Only allow recentering when trials are not actively running (on black screens)
+        bool cKeyPressed = Input.GetKeyDown(KeyCode.C);
+        bool bButtonPressed = Input.GetButtonDown("Fire2") || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.B);
+        
+        if (cKeyPressed || bButtonPressed)
+        {
+            string inputMethod = "";
+            if (cKeyPressed) inputMethod = "C key";
+            else if (Input.GetButtonDown("Fire2")) inputMethod = "Fire2 button";
+            else if (Input.GetButtonDown("Jump")) inputMethod = "Jump button";
+            else if (Input.GetKeyDown(KeyCode.B)) inputMethod = "B key";
+            
+            Debug.Log($"[Recenter] Input detected: {inputMethod}");
+            Debug.Log($"[Recenter] blackScreenUp: {blackScreenUp}, trialActive: {trialActive}");
+            
+            if (blackScreenUp && !trialActive)
+            {
+                Debug.Log($"[Recenter] Conditions met. Recentering triggered by {inputMethod}");
+                RecenterView();
+            }
+            else
+            {
+                Debug.LogWarning($"[Recenter] Conditions not met. Cannot recenter during active trial or when black screen is down.");
+            }
+        }
+
+        // Debug: Log any key press to verify input system is working
+        if (Input.anyKeyDown)
+        {
+            Debug.Log($"[Input] Any key pressed. blackScreenUp: {blackScreenUp}, trialActive: {trialActive}");
         }
 
         // Check for escape to quit experiment
