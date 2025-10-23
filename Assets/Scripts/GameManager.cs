@@ -84,8 +84,8 @@ public class GameManager : MonoBehaviour
     [Header("General Settings")]
     [CustomLabel("Trial Length (s)")]
     public float trialLength = 4f;
-    [CustomLabel("Movement Start Delay (s)")]
-    public float movementStartDelay = 1f; // Delay before spheres start moving (in seconds)
+    [CustomLabel("Trial Start Delay (s)")]
+    public float trialStartDelay = 1f; // Delay before trial begins (applies to all trial types)
     [Tooltip("Enable or disable sphere blinking visual cue at the start of trials.")]
     public bool blinkSpheres = true;
     [CustomLabel("Blink Duration (s)")]
@@ -360,11 +360,10 @@ public class GameManager : MonoBehaviour
         
         string breakMessage = $"Block {currentBlock} completed!\n\n" +
                              $"Trials completed: {totalTrialsCompleted} / {totalTrials}\n" +
-                             $"Trials remaining: {trialsRemaining}\n\n" +
+                             //$"Trials remaining: {trialsRemaining}\n\n" +
                              $"Next block will be: {nextBlockType}\n\n" +
                              "Take a break if needed.\n\n" +
-                             "Press SPACEBAR to continue to the next block.\n" +
-                             "Press B on controller or C on keyboard to recenter view.";
+                             "Press SPACEBAR to continue to the next block";
         
         ShowBlackScreen(breakMessage);
         
@@ -408,8 +407,8 @@ public class GameManager : MonoBehaviour
         isInBreakScreen = false;
         Debug.Log("[TrialBlocks] A button input RE-ENABLED. Normal trial continuation restored.");
         
-        // Show the standard "Press A" message to continue
-        ShowBlackScreen("Press A on the VR Controller Button to Continue");
+        // Show the same message as the initial screen
+        ShowBlackScreen("Press A on the VR Controller Button to Begin\n\n(Press B on controller to recenter view)");
         
         // The Update() method will handle the A button press to start the actual trial
     }
@@ -735,7 +734,7 @@ public class GameManager : MonoBehaviour
 
         // Show initial black screen with VR controller instruction
         Debug.Log("[GameManager] Calling ShowBlackScreen at Start()");
-        ShowBlackScreen("Press A on the VR Controller Button to Begin\n\nPress B on controller or C on keyboard to recenter view");
+        ShowBlackScreen("Press A on the VR Controller Button to Begin\n\n(Press B on controller to recenter view)");
         
         // Background generation disabled - each trial generates fresh random colors
         Debug.Log("[GameManager] Background generation disabled for fresh colors each trial");
@@ -782,15 +781,16 @@ public class GameManager : MonoBehaviour
 
         // Check for recentering input (B button on controller or C key on keyboard)
         // Only allow recentering when trials are not actively running (on black screens)
+        // Exclude spacebar even if it's mapped to Jump button
         bool cKeyPressed = Input.GetKeyDown(KeyCode.C);
-        bool bButtonPressed = Input.GetButtonDown("Fire2") || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.B);
+        bool bButtonPressed = (Input.GetButtonDown("Fire2") || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.B)) && !Input.GetKeyDown(KeyCode.Space);
         
         if (cKeyPressed || bButtonPressed)
         {
             string inputMethod = "";
             if (cKeyPressed) inputMethod = "C key";
             else if (Input.GetButtonDown("Fire2")) inputMethod = "Fire2 button";
-            else if (Input.GetButtonDown("Jump")) inputMethod = "Jump button";
+            else if (Input.GetButtonDown("Jump") && !Input.GetKeyDown(KeyCode.Space)) inputMethod = "Jump button";
             else if (Input.GetKeyDown(KeyCode.B)) inputMethod = "B key";
             
             Debug.Log($"[Recenter] Input detected: {inputMethod}");
@@ -910,8 +910,8 @@ public class GameManager : MonoBehaviour
         trialResults[1] = (trialNumber + 1).ToString();
         
         // Populate General Settings columns - updated indices with new column order
-        trialResults[9] = movementStartDelay.ToString();    // Movement Start Delay (s)
-        trialResults[10] = trialLength.ToString();          // Trial Length (s) - moved after Movement Start Delay
+        trialResults[9] = trialStartDelay.ToString();       // Trial Start Delay (s)
+        trialResults[10] = trialLength.ToString();          // Trial Length (s) - moved after Trial Start Delay
         // Response Time, Change Start Time, and Change End Time will be filled in SaveTrialResults
         trialResults[14] = blinkSpheres.ToString();         // Blink Spheres (shifted by +2)
         trialResults[15] = blinkSpheres ? blinkDuration.ToString() : ""; // Blink Duration (s)
@@ -1007,12 +1007,17 @@ public class GameManager : MonoBehaviour
             staticTrialsRun++;
             StartCoroutine(StaticChange(sphereToChange, addChange));
         }
-        else if (trialType == "Moving" || trialType == "ObserverMotion")
+        else if (trialType == "Moving")
         {
             trialNumber++;
             movingTrialsRun++;
-            // For now, ObserverMotion uses the same coroutine as Moving
             StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
+        }
+        else if (trialType == "ObserverMotion")
+        {
+            trialNumber++;
+            staticTrialsRun++; // Count as static trials since behavior is identical
+            StartCoroutine(ObserverMotionChange(sphereToChange, addChange));
         }
     }
     
@@ -2018,7 +2023,7 @@ public class GameManager : MonoBehaviour
                 yield return StartCoroutine(BlinkRing(spheres));
         }
             
-        yield return new WaitForSeconds(movementStartDelay);
+        yield return new WaitForSeconds(trialStartDelay);
 
         // Calculate when motion is expected to stop
         expectedMotionStopTime = Time.time + trialLength;
@@ -2139,7 +2144,7 @@ public class GameManager : MonoBehaviour
     /*private System.Collections.IEnumerator RotationalChangeAndMove(int sphereToChange, bool addChange, string trialType)
     {
         canClick = false;
-        yield return new WaitForSeconds(movementStartDelay);
+        yield return new WaitForSeconds(trialStartDelay);
 
         // Determine trial timing
         float firstHalfTrial = trialLength / 2f;
@@ -2508,10 +2513,13 @@ public class GameManager : MonoBehaviour
         canClick = false; // Disable clicking during this phase
         trialActive = true;
         
+        // Wait for trial start delay before beginning trial
+        yield return new WaitForSeconds(trialStartDelay);
+        
         // For static trials, there's no motion, so set expectedMotionStopTime to 0
         expectedMotionStopTime = 0f;
         
-        // Record trial start time
+        // Record trial start time (after delay)
         float trialStartTime = Time.time;
         
         // Only blink if blinkSpheres is enabled
@@ -2605,13 +2613,20 @@ public class GameManager : MonoBehaviour
         
         // Record all motion stop time
         allMotionStopTime = Time.time;
-    }   
+    }
+
+    // Observer Motion wrapper - identical to Static trials but labeled differently for CSV
+    System.Collections.IEnumerator ObserverMotionChange(int sphereToChange, bool addChange)
+    {
+        // Simply call the StaticChange coroutine - behavior is identical to Static
+        yield return StartCoroutine(StaticChange(sphereToChange, addChange));
+    }
 
     // Make a random change and move spheres
     /*System.Collections.IEnumerator DirectionChangeHueandMove(Vector3 startCenter, Vector3 endCenter, int sphereToChange, bool addChange, string trialType = "")
     {
         canClick = false; // Disable clicking during this phase
-        yield return new WaitForSeconds(movementStartDelay);
+        yield return new WaitForSeconds(trialStartDelay);
 
         // Split the trial in two halves
         float firstHalfTrial = trialLength / 2f;
@@ -3208,7 +3223,7 @@ public class GameManager : MonoBehaviour
         headers[6] = "After Change";
         headers[7] = "Selected Sphere";
         headers[8] = "Success";
-        headers[9] = "Movement Start Delay (s)";
+        headers[9] = "Trial Start Delay (s)";
         headers[10] = "Trial Length (s)";
         headers[11] = "Response Time (After Change Start) (s)";  // Renamed and moved
         headers[12] = "Change Start Time (s)";                   // New column

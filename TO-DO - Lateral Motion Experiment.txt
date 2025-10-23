@@ -1,6 +1,13 @@
+- Change Static (unlike Observer Motion) to start at the halfway point of the motion trials. Spheres are too far away.
+- Issues if a sphere is selected too early:
+    - CSV does not populate "Before Change" and "After Change" columns with values
+    - Ticking sounds stop prematurely
+
+DONE!
 - Create blocks, Set blocks to each have one type of motion each (Observer Motion, Object Motion, Static Motion)
     - Experimenter sets order beforehand: Block 1 - Dropdown of options, Block 2 - Dropdown of options, etc.
 
+DONE!
 - Remove Rotation-related Columns from CSV: Attendant Ring, Ring Configuration, Ring States, etc.
 
 - See about using the other room.
