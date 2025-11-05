@@ -317,6 +317,28 @@ public class GameManager : MonoBehaviour
         }
     }
     
+
+
+    // Control spatial grid visibility during experiment
+    private void SetGridForTrialState(bool duringTrial)
+    {
+        if (spatialGridManager != null)
+        {
+            if (duringTrial)
+            {
+                // During active trial - let SpatialGridManager control visibility/opacity
+                spatialGridManager.SetTrialState(true);
+            }
+            else
+            {
+                // Between trials - let SpatialGridManager control visibility
+                spatialGridManager.SetTrialState(false);
+            }
+        }
+    }
+
+
+
     // Initialize trial block system
     private void InitializeTrialBlocks()
     {
@@ -640,7 +662,7 @@ public class GameManager : MonoBehaviour
 
     [HideInInspector] public TMPro.TextMeshProUGUI focusPointText; // Assign in Inspector
 
-    
+    [HideInInspector] public SpatialGridManager spatialGridManager; // Assign in Inspector
 
 
     // --- Experiment state and timing fields ---
@@ -701,6 +723,12 @@ public class GameManager : MonoBehaviour
 
         // Creating headers for results
         CreateHeaders();
+        
+        // Find existing SpatialGridManager if present
+        if (spatialGridManager == null)
+        {
+            spatialGridManager = FindObjectOfType<SpatialGridManager>();
+        }
         
         // Calculate trials per block
         InitializeTrialBlocks();
@@ -864,6 +892,9 @@ public class GameManager : MonoBehaviour
         // Reset ring configuration for each new trial
         // Single ring system - no configuration needed
         Debug.Log("[GameManager] Ring configuration reset for new trial");
+        
+        // Ensure grid is in between-trial state (full visibility)
+        SetGridForTrialState(false);
         
         int totalTrials = trialsPerBlock * totalBlocks;
         if (trialNumber >= totalTrials)
@@ -2015,6 +2046,13 @@ public class GameManager : MonoBehaviour
     {
         canClick = false;
         trialActive = true;
+        
+        // Set grid state for trial start
+        SetGridForTrialState(true);
+        
+        // Wait for trial start delay before beginning trial
+        yield return new WaitForSeconds(trialStartDelay);
+        
         // Only blink if blinkSpheres is enabled
         if (blinkSpheres)
         {
@@ -2512,6 +2550,9 @@ public class GameManager : MonoBehaviour
     {
         canClick = false; // Disable clicking during this phase
         trialActive = true;
+        
+        // Set grid state for trial start
+        SetGridForTrialState(true);
         
         // Wait for trial start delay before beginning trial
         yield return new WaitForSeconds(trialStartDelay);
@@ -3355,6 +3396,10 @@ public class GameManager : MonoBehaviour
         // Prevent further clicks until the next trial 
         canClick = false; 
         trialActive = false; // Stop all motion immediately
+        
+        // Reset grid state for between trials
+        SetGridForTrialState(false);
+        
         Debug.Log("Interaction disabled (canClick set to false). Preparing for the next trial..."); 
 
         // Update trial block progress

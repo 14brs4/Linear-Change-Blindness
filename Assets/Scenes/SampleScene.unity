@@ -1465,46 +1465,50 @@ MonoBehaviour:
   interactionManager: {fileID: 1192322633}
   spherePrefab: {fileID: 4520263005337382652, guid: 9dd4a3b97dfb58f4895938a1b7a01d0b, type: 3}
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
-  participantName: test
-  changeType: 2
-  staticTrials: 2
-  innerMovingTrials: 2
-  outerMovingTrials: 2
-  bothMovingTrials: 2
-  changeInnerRing: 1
-  changeOuterRing: 1
+  participantName: test3
+  changeType: 0
+  block1Type: 0
+  block2Type: 1
+  block3Type: 2
+  trialsPerBlock: 3
   trialLength: 4
-  movementStartDelay: 0.3
+  trialStartDelay: 1
   blinkSpheres: 0
   blinkDuration: 0.2
-  rotationSpeed: 110
-  ringOneNumSpheres: 6
-  ringTwoNumSpheres: 6
-  ringThreeNumSpheres: 6
-  ringOneRadius: 1
-  ringTwoRadius: 2
-  ringThreeRadius: 3
+  movementSpeed: 2
+  changeDuration: 2
+  movementDistance: 3
+  startingZPosition: 0
+  numberOfSpheres: 6
+  ringRadius: 2
   sphereSaturation: 0.8
   sphereValue: 0.8
   sphereSize: 0.7
-  inactiveRingTransparency: 0.82
-  centerPoint: {x: 0, y: 0, z: -3}
+  centerPoint: {x: 0, y: 0, z: -20}
   lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
   highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
   audioSource: {fileID: 575565943}
   soundInterval: 0.75
   hueChangeHSV: 0.103
-  valueChange: 0.09
+  luminanceChange: 0.2
   sizeChange: 0.1
   minSize: 0.525
   maxSize: 0.8
-  ferrisWheelSpin: 0
+  individualSphereMovement: 0
   orientationChange: 15
   selectedSphere: 
   success: 
   blackScreen: {fileID: 1253311034}
-  innerSpheres: []
+  spheres: []
+  ringParent: {fileID: 0}
   focusPointText: {fileID: 2035459158}
+  enableSpatialGrid: 1
+  gridOpacityDuringTrials: 0.3
+  hideGridDuringTrials: 0
+  quickCheckerColor1: {r: 0.8784314, g: 0.8784314, b: 0.8784314, a: 1}
+  quickCheckerColor2: {r: 0.7647059, g: 0.7647059, b: 0.7647059, a: 1}
+  quickFloorY: -1.5
+  spatialGridManager: {fileID: 0}
 --- !u!4 &774021304
 Transform:
   m_ObjectHideFlags: 0
@@ -2295,6 +2299,61 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1253311034}
   m_CullTransparentMesh: 1
+--- !u!1 &1259672009
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1259672011}
+  - component: {fileID: 1259672010}
+  m_Layer: 0
+  m_Name: Grid Setup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1259672010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1259672009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6be9839edbe69746adc645f17630f8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridSquareSize: 1
+  gridExtentX: 15
+  gridExtentZ: 25
+  wallHeight: 4
+  checkerColor1: {r: 0.8773585, g: 0.8773585, b: 0.8773585, a: 1}
+  checkerColor2: {r: 0.764151, g: 0.764151, b: 0.764151, a: 1}
+  enableFloorGrid: 1
+  enableCeilingGrid: 0
+  enableWallGrids: 0
+  floorY: -1.5
+  ceilingY: 3
+--- !u!4 &1259672011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1259672009}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 8
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1266678661 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8022141474358935409, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}

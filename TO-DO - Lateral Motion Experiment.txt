@@ -1,3 +1,7 @@
+Question: How do we want the blocks split?
+    - Just two types: Motion and Static?
+    - Or 4 types: Both Moving, Inner Moving, Outer Moving, Static?
+
 - Change Static (unlike Observer Motion) to start at the halfway point of the motion trials. Spheres are too far away.
 - Issues if a sphere is selected too early:
     - CSV does not populate "Before Change" and "After Change" columns with values
