@@ -64,9 +64,11 @@ public class SpatialGridSetup : MonoBehaviour
         gridManager.floorY = this.floorY;
         gridManager.ceilingY = this.ceilingY;
 
-        // Set Unity's default void colors
-        gridManager.checkerColor1 = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
-        gridManager.checkerColor2 = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Slightly darker
+        // Set Unity's default void colors for wireframe
+        gridManager.backgroundColor = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
+        gridManager.lineColor = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Darker lines
+        gridManager.enableBackground = true; // Enable background by default
+        gridManager.lineWidth = 8; // Medium line width
 
         Debug.Log("[SPATIAL GRID SETUP] Spatial grid system created successfully!");
         Debug.Log($"[SPATIAL GRID SETUP] Grid square size: {gridSquareSize}m");

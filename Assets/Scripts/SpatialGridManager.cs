@@ -22,12 +22,19 @@ public class SpatialGridManager : MonoBehaviour
     [Tooltip("Height of the walls in meters")]
     public float wallHeight = 4.0f;
     
-    [Header("Grid Colors")]
-    [Tooltip("First checkerboard color - customize as needed")]
-    public Color checkerColor1 = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
+    [Header("Wireframe Grid Appearance")]
+    [Tooltip("Background color for the grid surfaces")]
+    public Color backgroundColor = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
     
-    [Tooltip("Second checkerboard color - customize as needed")]
-    public Color checkerColor2 = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Slightly darker
+    [Tooltip("Enable background fill (uncheck for transparent wireframe only)")]
+    public bool enableBackground = true;
+    
+    [Tooltip("Grid line color")]
+    public Color lineColor = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Darker grey for lines
+    
+    [Tooltip("Width of grid lines in texture pixels (higher = thicker lines)")]
+    [Range(1, 32)]
+    public int lineWidth = 8;
     
     [Header("Grid Components")]
     [Tooltip("Enable floor grid")]
@@ -77,23 +84,90 @@ public class SpatialGridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Create materials for the grid pattern
+    /// Create materials for the wireframe grid pattern
     /// </summary>
     void CreateMaterials()
     {
-        // Create material for first checkerboard color
-        baseMaterial = new Material(Shader.Find("Standard"));
-        baseMaterial.color = checkerColor1;
+        // Create wireframe grid texture
+        Texture2D gridTexture = CreateWireframeTexture();
+        
+        // Create the wireframe material
+        if (enableBackground)
+        {
+            // Opaque material with background
+            baseMaterial = new Material(Shader.Find("Standard"));
+            baseMaterial.mainTexture = gridTexture;
+            baseMaterial.color = Color.white; // Texture handles coloring
+        }
+        else
+        {
+            // Transparent material (wireframe only)
+            baseMaterial = new Material(Shader.Find("Standard"));
+            baseMaterial.mainTexture = gridTexture;
+            baseMaterial.color = Color.white;
+            
+            // Set up transparency
+            baseMaterial.SetFloat("_Mode", 3); // Transparent mode
+            baseMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            baseMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            baseMaterial.SetInt("_ZWrite", 0);
+            baseMaterial.DisableKeyword("_ALPHATEST_ON");
+            baseMaterial.EnableKeyword("_ALPHABLEND_ON");
+            baseMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            baseMaterial.renderQueue = 3000;
+        }
+        
         baseMaterial.SetFloat("_Metallic", 0f);
-        baseMaterial.SetFloat("_Glossiness", 0.1f); // Slight roughness for better depth perception
-        baseMaterial.name = "GridChecker1_Material";
+        baseMaterial.SetFloat("_Glossiness", 0.1f);
+        baseMaterial.name = "WireframeGrid_Material";
+        
+        // Use the same material for both (no more checkerboard pattern)
+        darkMaterial = baseMaterial;
+        
+        Debug.Log($"[SpatialGrid] Wireframe material created - Background: {(enableBackground ? "Enabled" : "Transparent")}, Line width: {lineWidth}");
+    }
 
-        // Create material for second checkerboard color
-        darkMaterial = new Material(Shader.Find("Standard"));
-        darkMaterial.color = checkerColor2;
-        darkMaterial.SetFloat("_Metallic", 0f);
-        darkMaterial.SetFloat("_Glossiness", 0.1f);
-        darkMaterial.name = "GridChecker2_Material";
+    /// <summary>
+    /// Create wireframe grid texture
+    /// </summary>
+    Texture2D CreateWireframeTexture()
+    {
+        int textureSize = 256;
+        Texture2D texture = new Texture2D(textureSize, textureSize);
+        Color[] pixels = new Color[textureSize * textureSize];
+        
+        // Fill with background color or transparent
+        Color bgColor = enableBackground ? backgroundColor : new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0f);
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = bgColor;
+        }
+        
+        // Draw grid lines
+        // Top horizontal line
+        for (int y = 0; y < lineWidth && y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                pixels[y * textureSize + x] = lineColor;
+            }
+        }
+        
+        // Left vertical line
+        for (int x = 0; x < lineWidth && x < textureSize; x++)
+        {
+            for (int y = 0; y < textureSize; y++)
+            {
+                pixels[y * textureSize + x] = lineColor;
+            }
+        }
+        
+        texture.SetPixels(pixels);
+        texture.Apply();
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Point; // Sharp lines
+        
+        return texture;
     }
 
     /// <summary>
@@ -141,9 +215,8 @@ public class SpatialGridManager : MonoBehaviour
         {
             for (int z = 0; z < gridCountZ; z++)
             {
-                // Determine checkerboard pattern
-                bool useColor2 = (x + z) % 2 == 1;
-                Material material = useColor2 ? darkMaterial : baseMaterial;
+                // All squares use the same wireframe material
+                Material material = baseMaterial;
                 
                 // Create the grid square
                 GameObject square = CreateGridSquare($"Floor_Square_{x}_{z}", material);
@@ -177,9 +250,8 @@ public class SpatialGridManager : MonoBehaviour
         {
             for (int z = 0; z < gridCountZ; z++)
             {
-                // Determine checkerboard pattern
-                bool useColor2 = (x + z) % 2 == 1;
-                Material material = useColor2 ? darkMaterial : baseMaterial;
+                // All squares use the same wireframe material
+                Material material = baseMaterial;
                 
                 // Create the grid square
                 GameObject square = CreateGridSquare($"Ceiling_Square_{x}_{z}", material);
@@ -225,9 +297,8 @@ public class SpatialGridManager : MonoBehaviour
         {
             for (int v = 0; v < verticalCount; v++)
             {
-                // Determine checkerboard pattern
-                bool useColor2 = (h + v) % 2 == 1;
-                Material material = useColor2 ? darkMaterial : baseMaterial;
+                // All squares use the same wireframe material
+                Material material = baseMaterial;
                 
                 // Create the grid square
                 GameObject square = CreateGridSquare($"{wallName}_Square_{h}_{v}", material);
@@ -339,16 +410,9 @@ public class SpatialGridManager : MonoBehaviour
         
         if (baseMaterial != null)
         {
-            Color color1 = checkerColor1;
-            color1.a = alpha;
-            baseMaterial.color = color1;
-        }
-        
-        if (darkMaterial != null)
-        {
-            Color color2 = checkerColor2;
-            color2.a = alpha;
-            darkMaterial.color = color2;
+            Color materialColor = baseMaterial.color;
+            materialColor.a = alpha;
+            baseMaterial.color = materialColor;
         }
     }
 
@@ -359,16 +423,9 @@ public class SpatialGridManager : MonoBehaviour
     {
         if (baseMaterial != null)
         {
-            Color color1 = checkerColor1;
-            color1.a = 1.0f;
-            baseMaterial.color = color1;
-        }
-        
-        if (darkMaterial != null)
-        {
-            Color color2 = checkerColor2;
-            color2.a = 1.0f;
-            darkMaterial.color = color2;
+            Color materialColor = baseMaterial.color;
+            materialColor.a = 1.0f;
+            baseMaterial.color = materialColor;
         }
     }
 
@@ -411,22 +468,57 @@ public class SpatialGridManager : MonoBehaviour
 
 
     /// <summary>
-    /// Update grid colors at runtime
+    /// Update grid colors and regenerate wireframe texture
     /// </summary>
-    public void UpdateGridColors(Color newColor1, Color newColor2)
+    public void UpdateGridColors(Color newBackgroundColor, Color newLineColor)
     {
-        checkerColor1 = newColor1;
-        checkerColor2 = newColor2;
+        backgroundColor = newBackgroundColor;
+        lineColor = newLineColor;
         
+        // Regenerate texture with new colors
         if (baseMaterial != null)
         {
-            baseMaterial.color = checkerColor1;
+            Texture2D newTexture = CreateWireframeTexture();
+            baseMaterial.mainTexture = newTexture;
+            
+            Debug.Log($"[SpatialGrid] Wireframe colors updated - Background: {backgroundColor}, Lines: {lineColor}");
+        }
+    }
+
+    /// <summary>
+    /// Update line width and regenerate texture
+    /// </summary>
+    public void UpdateLineWidth(int newLineWidth)
+    {
+        lineWidth = Mathf.Clamp(newLineWidth, 1, 32);
+        
+        // Regenerate texture with new line width
+        if (baseMaterial != null)
+        {
+            Texture2D newTexture = CreateWireframeTexture();
+            baseMaterial.mainTexture = newTexture;
+            
+            Debug.Log($"[SpatialGrid] Line width updated to {lineWidth}");
+        }
+    }
+
+    /// <summary>
+    /// Toggle background transparency
+    /// </summary>
+    public void SetBackgroundEnabled(bool enabled)
+    {
+        enableBackground = enabled;
+        
+        // Recreate materials to handle transparency change
+        CreateMaterials();
+        
+        // Update all existing squares with new material
+        if (Application.isPlaying)
+        {
+            RegenerateGrid();
         }
         
-        if (darkMaterial != null)
-        {
-            darkMaterial.color = checkerColor2;
-        }
+        Debug.Log($"[SpatialGrid] Background {(enabled ? "enabled" : "disabled (transparent)")}");
     }
 
 #if UNITY_EDITOR
@@ -435,10 +527,14 @@ public class SpatialGridManager : MonoBehaviour
     /// </summary>
     void OnValidate()
     {
+        // Clamp line width
+        lineWidth = Mathf.Clamp(lineWidth, 1, 32);
+        
         // Only regenerate in play mode to avoid editor issues
         if (Application.isPlaying && gridParent != null)
         {
-            RegenerateGrid();
+            CreateMaterials(); // Recreate materials with new settings
+            RegenerateGrid();  // Regenerate grid with new materials
         }
     }
 #endif
