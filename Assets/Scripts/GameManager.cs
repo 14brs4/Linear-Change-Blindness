@@ -4,6 +4,7 @@ using UnityEditor;
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables; 
@@ -55,6 +56,14 @@ public class GameManager : MonoBehaviour
     public ChangeType changeType = ChangeType.Hue;
     
     [Header("Block Configuration")]
+    [CustomLabel("Training Block")]
+    [Tooltip("Enable training block before main experiment blocks")]
+    public bool trainingBlock = false;
+
+    [CustomLabel("Trials per Training Block")]
+    [Tooltip("Number of training trials (grid-only, no spheres)")]
+    public int trialsPerTrainingBlock = 5;
+
     [CustomLabel("Block 1")]
     [Tooltip("Motion type for Block 1 trials")]
     public MotionType block1Type = MotionType.Static;
@@ -347,7 +356,7 @@ public class GameManager : MonoBehaviour
         
         // Reset counters
         currentBlockTrialCount = 0;
-        currentBlock = 1;
+        currentBlock = trainingBlock ? 0 : 1; // Start with training block (0) if enabled, otherwise Block 1
     }
     
     // Check if it's time for a break between trial blocks
@@ -356,9 +365,18 @@ public class GameManager : MonoBehaviour
         int totalTrialsCompleted = staticTrialsRun + movingTrialsRun;
         int totalTrials = trialsPerBlock * totalBlocks;
         
-        bool shouldBreak = currentBlockTrialCount >= trialsPerBlock && currentBlock < totalBlocks;
+        bool shouldBreak = false;
         
-        Debug.Log($"[TrialBlocks] Block {currentBlock} progress: {currentBlockTrialCount}/{trialsPerBlock}, Total progress: {totalTrialsCompleted}/{totalTrials}, Should break: {shouldBreak}");
+        if (currentBlock == 0) // Training block
+        {
+            shouldBreak = currentBlockTrialCount >= trialsPerTrainingBlock;
+        }
+        else // Regular blocks
+        {
+            shouldBreak = currentBlockTrialCount >= trialsPerBlock && currentBlock < totalBlocks;
+        }
+        
+        Debug.Log($"[TrialBlocks] Block {currentBlock} progress: {currentBlockTrialCount}/{(currentBlock == 0 ? trialsPerTrainingBlock : trialsPerBlock)}, Total progress: {totalTrialsCompleted}/{totalTrials}, Should break: {shouldBreak}");
         
         // Check if we've completed the current block and there are more blocks remaining
         return shouldBreak;
@@ -380,7 +398,8 @@ public class GameManager : MonoBehaviour
         
         string nextBlockType = GetBlockTypeString(GetNextBlockType());
         
-        string breakMessage = $"Block {currentBlock} completed!\n\n" +
+        string blockName = currentBlock == 0 ? "Training Block" : $"Block {currentBlock}";
+        string breakMessage = $"{blockName} completed!\n\n" +
                              $"Trials completed: {totalTrialsCompleted} / {totalTrials}\n" +
                              //$"Trials remaining: {trialsRemaining}\n\n" +
                              $"Next block will be: {nextBlockType}\n\n" +
@@ -907,7 +926,7 @@ public class GameManager : MonoBehaviour
         // Ensure grid is in between-trial state (full visibility)
         SetGridForTrialState(false);
         
-        int totalTrials = trialsPerBlock * totalBlocks;
+        int totalTrials = trialsPerBlock * totalBlocks + (trainingBlock ? trialsPerTrainingBlock : 0);
         if (trialNumber >= totalTrials)
         {
             experimentRunning = false;
@@ -929,6 +948,13 @@ public class GameManager : MonoBehaviour
     private void GenerateAndExecuteTrial()
     {
         Debug.Log($"[GameManager] GenerateAndExecuteTrial starting for trial {trialNumber + 1}");
+        
+        // Check if we're in training block - execute training trial instead
+        if (currentBlock == 0)
+        {
+            ExecuteTrainingTrial();
+            return;
+        }
         
         // Single ring system - no configuration needed
         
@@ -1025,6 +1051,100 @@ public class GameManager : MonoBehaviour
         string[] allColors = GenerateSpheresForTrial();
         ExecuteTrial(sphereToChange, addChange, trialType, allColors);
     }
+    
+    // Execute training trial (grid only, no spheres)
+    private void ExecuteTrainingTrial()
+    {
+        Debug.Log($"[TrainingTrial] Starting training trial {currentBlockTrialCount + 1}/{trialsPerTrainingBlock}");
+        
+        trialNumber++;
+        
+        // Ensure grid is visible for training
+        SetGridForTrialState(false); // Full visibility during training
+        
+        // Start training trial coroutine (grid + ticking, wait for button press)
+        StartCoroutine(TrainingTrialCoroutine());
+    }
+    
+    // Training trial coroutine - shows grid with beep sequence, waits for VR trigger press
+    private IEnumerator TrainingTrialCoroutine()
+    {
+        Debug.Log("[TrainingTrial] Starting training trial with grid and beep sequence");
+        
+        // Enable trial interaction
+        trialActive = true;
+        
+        // Ensure grid is visible for training (same as regular trials)
+        SetGridForTrialState(true);
+        
+        // Wait for trial start delay (same as regular trials)
+        yield return new WaitForSeconds(trialStartDelay);
+        
+        // Play beep sequence (3 low beeps + 1 high beep) like regular trials
+        if (audioSource != null && lowSound != null && highSound != null)
+        {
+            yield return StartCoroutine(PlayBeepsAndChange(3, soundInterval, () => {}));
+        }
+        
+        // Wait for VR controller side trigger button press
+        bool triggerPressed = false;
+        
+        while (!triggerPressed)
+        {
+            // Check for XR primary trigger using XR Input system (same as sphere selection)
+            var rightDevices = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+            var leftDevices = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+            
+            UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(UnityEngine.XR.InputDeviceCharacteristics.Controller | UnityEngine.XR.InputDeviceCharacteristics.Right, rightDevices);
+            if (rightDevices.Count > 0)
+            {
+                if (rightDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out bool rightGrip) && rightGrip)
+                {
+                    triggerPressed = true;
+                }
+            }
+            
+            if (!triggerPressed)
+            {
+                UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(UnityEngine.XR.InputDeviceCharacteristics.Controller | UnityEngine.XR.InputDeviceCharacteristics.Left, leftDevices);
+                if (leftDevices.Count > 0)
+                {
+                    if (leftDevices[0].TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out bool leftGrip) && leftGrip)
+                    {
+                        triggerPressed = true;
+                    }
+                }
+            }
+            
+            yield return null;
+        }
+        
+        trialActive = false;
+        
+        // Complete the training trial
+        CompleteTrainingTrial();
+    }
+    
+    // Complete training trial and advance to next
+    private void CompleteTrainingTrial()
+    {
+        Debug.Log($"[TrainingTrial] Training trial {currentBlockTrialCount + 1} completed");
+        
+        // Increment trial counters
+        currentBlockTrialCount++;
+        
+        // Check if training block is complete
+        if (ShouldTakeBreak())
+        {
+            ShowBreakScreen();
+        }
+        else
+        {
+            // Continue to next training trial
+            StartCoroutine(DelayedNextTrial());
+        }
+    }
+
     
     // Execute a trial with given parameters and sphere colors
     private void ExecuteTrial(int sphereToChange, bool addChange, string trialType, string[] allColors)
@@ -3384,6 +3504,8 @@ public class GameManager : MonoBehaviour
 
         // Stop any active beep sequence when user interacts
         StopBeepSequence();
+
+
 
         // Ensure clicks are only processed when allowed 
         if (!canClick) 
