@@ -64,6 +64,8 @@ public class GameManager : MonoBehaviour
     [Tooltip("Number of training trials (grid-only, no spheres)")]
     public int trialsPerTrainingBlock = 5;
 
+
+
     [CustomLabel("Block 1")]
     [Tooltip("Motion type for Block 1 trials")]
     public MotionType block1Type = MotionType.Static;
@@ -1077,6 +1079,14 @@ public class GameManager : MonoBehaviour
         // Ensure grid is visible for training (same as regular trials)
         SetGridForTrialState(true);
         
+        // Show guide path during training trials
+        if (spatialGridManager != null)
+        {
+            spatialGridManager.ShowGuidePath(true); // Pass true to indicate this is a training trial
+        }
+        
+
+        
         // Wait for trial start delay (same as regular trials)
         yield return new WaitForSeconds(trialStartDelay);
         
@@ -1130,6 +1140,12 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"[TrainingTrial] Training trial {currentBlockTrialCount + 1} completed");
         
+        // Hide training path
+        if (spatialGridManager != null)
+        {
+            spatialGridManager.HideGuidePath();
+        }
+        
         // Increment trial counters
         currentBlockTrialCount++;
         
@@ -1144,6 +1160,8 @@ public class GameManager : MonoBehaviour
             StartCoroutine(DelayedNextTrial());
         }
     }
+
+
 
     
     // Execute a trial with given parameters and sphere colors
