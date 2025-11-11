@@ -62,6 +62,7 @@ public class GameManager : MonoBehaviour
 
     [CustomLabel("Trials per Training Block")]
     [Tooltip("Number of training trials (grid-only, no spheres)")]
+    [ConditionalEnable("trainingBlock", true)]
     public int trialsPerTrainingBlock = 5;
 
 
@@ -2201,6 +2202,12 @@ public class GameManager : MonoBehaviour
         // Set grid state for trial start
         SetGridForTrialState(true);
         
+        // Show guide path if set to Always mode
+        if (spatialGridManager != null)
+        {
+            spatialGridManager.ShowGuidePath(false); // Pass false to indicate this is a regular trial
+        }
+        
         // Wait for trial start delay before beginning trial
         yield return new WaitForSeconds(trialStartDelay);
         
@@ -2717,6 +2724,12 @@ public class GameManager : MonoBehaviour
         
         // Set grid state for trial start
         SetGridForTrialState(true);
+        
+        // Show guide path if set to Always mode
+        if (spatialGridManager != null)
+        {
+            spatialGridManager.ShowGuidePath(false); // Pass false to indicate this is a regular trial
+        }
         
         // Wait for trial start delay before beginning trial
         yield return new WaitForSeconds(trialStartDelay);
