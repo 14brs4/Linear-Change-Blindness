@@ -1467,28 +1467,27 @@ MonoBehaviour:
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
   participantName: test3
   changeType: 0
-  block1Type: 0
-  block2Type: 1
+  block1Type: 1
+  block2Type: 0
   block3Type: 2
   trialsPerBlock: 3
-  trialLength: 4
+  trialLength: 4.5
   trialStartDelay: 1
   blinkSpheres: 0
   blinkDuration: 0.2
   movementSpeed: 2
   changeDuration: 2
-  movementDistance: 3
-  startingZPosition: 0
   numberOfSpheres: 6
   ringRadius: 2
   sphereSaturation: 0.8
   sphereValue: 0.8
   sphereSize: 0.7
-  centerPoint: {x: 0, y: 0, z: -20}
+  centerPoint: {x: 0, y: 0, z: -3}
+  endPoint: {x: 0, y: 0, z: 0}
   lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
   highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
   audioSource: {fileID: 575565943}
-  soundInterval: 0.75
+  soundInterval: 1
   hueChangeHSV: 0.103
   luminanceChange: 0.2
   sizeChange: 0.1
@@ -1502,12 +1501,6 @@ MonoBehaviour:
   spheres: []
   ringParent: {fileID: 0}
   focusPointText: {fileID: 2035459158}
-  enableSpatialGrid: 1
-  gridOpacityDuringTrials: 0.3
-  hideGridDuringTrials: 0
-  quickCheckerColor1: {r: 0.8784314, g: 0.8784314, b: 0.8784314, a: 1}
-  quickCheckerColor2: {r: 0.7647059, g: 0.7647059, b: 0.7647059, a: 1}
-  quickFloorY: -1.5
   spatialGridManager: {fileID: 0}
 --- !u!4 &774021304
 Transform:
@@ -2328,16 +2321,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6be9839edbe69746adc645f17630f8f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridSquareSize: 1
+  gridSquareSize: 0.5
   gridExtentX: 15
   gridExtentZ: 25
   wallHeight: 4
-  checkerColor1: {r: 0.8773585, g: 0.8773585, b: 0.8773585, a: 1}
-  checkerColor2: {r: 0.764151, g: 0.764151, b: 0.764151, a: 1}
+  backgroundColor: {r: 0.4716981, g: 0.4716981, b: 0.4716981, a: 1}
+  enableBackground: 0
+  lineColor: {r: 0.13, g: 0.13, b: 0.13, a: 1}
+  lineWidth: 5
   enableFloorGrid: 1
   enableCeilingGrid: 0
   enableWallGrids: 0
-  floorY: -1.5
+  trialOpacity: 0.52
+  hideGridDuringTrials: 0
+  showGridBetweenTrials: 0
+  floorY: -2
   ceilingY: 3
 --- !u!4 &1259672011
 Transform:

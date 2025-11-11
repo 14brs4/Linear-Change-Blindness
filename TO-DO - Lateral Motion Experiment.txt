@@ -1,3 +1,12 @@
+Starting Z position:
+
+- Spheres, same FOV -- Much smaller size and radius. Should be about 4m away -- meaning you close half the distance when you walk towards them.
+- Make a training block: No spheres visible, just to get participants used to walking. Each step should be approx. in the middle of each square -- 0.5m apart.
+	- Optional: Make the squares they should walk a different colour: "You should be at the end of the coloured squares when you are finished your steps."
+- Make a training block: No spheres visible, just to get participants used to walking. Each step should be approx. in the middle of each square -- 0.5m apart.
+
+
+
 Question: How do we want the blocks split?
     - Just two types: Motion and Static?
     - Or 4 types: Both Moving, Inner Moving, Outer Moving, Static?

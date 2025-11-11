@@ -97,11 +97,8 @@ public class GameManager : MonoBehaviour
     [Tooltip("Duration for gradual sphere changes. 0 = instantaneous. Change occurs from trialLength/2 - changeDuration/2 to trialLength/2 + changeDuration/2.")]
     public float changeDuration = 0f;
     
-    [Header("Linear Movement Settings")]
-    [CustomLabel("Movement Distance (units)")]
-    public float movementDistance = 3f; // Total distance spheres will move towards the user
-    [CustomLabel("Starting Z Position")]
-    public float startingZPosition = 0f; // Starting Z position for spheres (will move to startingZ - movementDistance)
+
+
 
     private string participantFileName
     {
@@ -119,7 +116,7 @@ public class GameManager : MonoBehaviour
     private string resultsFolder;
 
     // Sphere details
-    
+    [Header("Linear Movement Settings")]
     [CustomLabel("# of Spheres")]
     public int numberOfSpheres = 6; // Number of spheres to create in the single ring
     [CustomLabel("Ring Radius")]
@@ -133,7 +130,10 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
     public float sphereSize = 0.7f;
     [Tooltip("When enabled, the inactive ring maintains default appearance (no randomization of hue, saturation, value, or size).")]
-    public Vector3 centerPoint = Vector3.zero; // Center of the ring
+    [CustomLabel("Start Point")]
+    public Vector3 centerPoint = Vector3.zero; // Starting position of the ring (spheres move from here to endPoint)
+        // Movement distance now defined by difference between centerPoint and endPoint
+    public Vector3 endPoint = new Vector3(0f, 0f, -3f); // Where spheres move to during trials (negative Z = toward player)
     // --- Audio cue fields ---
     public AudioClip lowSound; // Assign normal beep in Inspector
     public AudioClip highSound; // Assign high-pitch beep in Inspector
@@ -592,7 +592,8 @@ public class GameManager : MonoBehaviour
         if (TryRecenterVRTrackingOrigin(headPosition, headForward))
         {
             Debug.Log("[Recenter] Successfully recentered VR tracking origin. Unity world space now aligned with viewer.");
-            centerPoint = Vector3.zero; // Reset since tracking space is now aligned
+            // Keep user's centerPoint setting - don't override to Vector3.zero
+            Debug.Log($"[Recenter] Preserving user's Center Point setting: {centerPoint}");
             return;
         }
         
@@ -609,8 +610,8 @@ public class GameManager : MonoBehaviour
             Debug.Log($"[Recenter] Rotated XR Origin by {-angleToRotate}° to align Unity world space with viewer direction");
             Debug.Log($"[Recenter] Unity Z-axis now points toward viewer. Existing movement code will work unchanged.");
             
-            // Reset centerPoint since coordinate system is now aligned
-            centerPoint = Vector3.zero;
+            // Keep user's centerPoint setting - don't override to Vector3.zero
+            Debug.Log($"[Recenter] Preserving user's Center Point setting: {centerPoint}");
         }
         else
         {
@@ -620,15 +621,15 @@ public class GameManager : MonoBehaviour
             // Project the forward vector onto the horizontal plane
             Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
             
-            // Calculate the new center point based on where the user is looking
-            Vector3 newCenterPoint = headPosition + horizontalForward * ringRadius;
-            centerPoint = newCenterPoint;
+            // Keep user's centerPoint setting - don't override with calculated position
+            Debug.Log($"[Recenter] Manual recentering - preserving user's Start Point: {centerPoint}");
             
-            // Manual repositioning of objects...
-            Debug.Log($"[Recenter] Manual recentering - centerPoint set to: {centerPoint}");
+            // Manual repositioning of existing spheres to respect user's Start Point...
         }
         
         Debug.Log($"[Recenter] Recentering complete. Coordinate system now aligned with viewer.");
+        
+        // Do not automatically move existing rings - preserve trial-specific Start Point positions
     }
 
     // Reposition existing spheres around the new center point
@@ -656,6 +657,16 @@ public class GameManager : MonoBehaviour
         }
         
         Debug.Log($"[Recenter] Repositioned {spheres.Length} spheres around new center point.");
+    }
+
+    // Update ring parent position to match user's centerPoint setting
+    private void UpdateRingParentPosition()
+    {
+        if (ringParent != null)
+        {
+            ringParent.transform.position = centerPoint;
+            Debug.Log($"[UpdateRingParentPosition] Ring parent positioned at: {centerPoint}");
+        }
     }
 
     [HideInInspector] public GameObject ringParent; // Parent object for the single ring
@@ -946,7 +957,7 @@ public class GameManager : MonoBehaviour
         // Response Time, Change Start Time, and Change End Time will be filled in SaveTrialResults
         trialResults[14] = blinkSpheres.ToString();         // Blink Spheres (shifted by +2)
         trialResults[15] = blinkSpheres ? blinkDuration.ToString() : ""; // Blink Duration (s)
-        trialResults[16] = movementSpeed.ToString();        // Rotation Speed (°/s)
+        trialResults[16] = movementSpeed.ToString();        // Movement Speed (units/s) - Linear motion
         trialResults[17] = numberOfSpheres.ToString();      // # of Spheres
         trialResults[18] = ringRadius.ToString();           // Radius
         trialResults[19] = sphereSaturation.ToString();     // Sphere Saturation
@@ -2021,7 +2032,7 @@ public class GameManager : MonoBehaviour
         return sphereColors;
     }*/
 
-    // Run a rotational trial
+    // DEFUNCT: Run a rotational trial - no longer used in linear motion experiment
     /*private string[] RotationalTrial(int sphereToChange, bool addChange, string trialType)
     {
         DestroySpheres();
@@ -2032,6 +2043,7 @@ public class GameManager : MonoBehaviour
         return sphereColors;
     }*/
 
+    /* DEFUNCT ROTATIONAL CODE - NO LONGER USED IN LINEAR MOTION EXPERIMENT
     private string[] RotationalOneDirTrial(int sphereToChange, bool addChange, RingMovementType moveType)
     {
         DestroySpheres();
@@ -2041,6 +2053,7 @@ public class GameManager : MonoBehaviour
         StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
         return sphereColors;
     }
+    */
 
     private System.Collections.IEnumerator LinearMovementCoroutine(int sphereToChange, bool addChange)
     {
@@ -2163,6 +2176,7 @@ public class GameManager : MonoBehaviour
         // Remove canClick = true here
     }
 
+    /* DEFUNCT ROTATIONAL CODE - NO LONGER USED IN LINEAR MOTION EXPERIMENT
     private string[] RotationalTwoDirTrial(int sphereToChange, bool addChange, RingMovementType moveType)
     {
         DestroySpheres();
@@ -2178,6 +2192,7 @@ public class GameManager : MonoBehaviour
         // This coroutine is now identical to LinearMovementCoroutine, so just call it
         yield return StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
     }
+    */
 
     /*private System.Collections.IEnumerator RotationalChangeAndMove(int sphereToChange, bool addChange, string trialType)
     {
@@ -2276,9 +2291,17 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[UpdateSpherePositions] Single ring system - moveInner: {moveInner}, moveOuter: {moveOuter}");
         Debug.Log($"[UpdateSpherePositions] changeOrientation: {changeOrientation}, individualSphereMovement: {individualSphereMovement}");
         
-        // Calculate current Z position based on movement progress (0 = start, 1 = end)
-        float currentInnerZ = startingZPosition - (movementProgress * movementDistance);
-        float currentOuterZ = startingZPosition - ((outerMovementProgress == 0f ? movementProgress : outerMovementProgress) * movementDistance);
+        // Calculate current position based on movement progress (0 = start at centerPoint, 1 = end at endPoint)
+        // Use absolute positions: interpolate from centerPoint to endPoint with Z offset for user position
+        Vector3 startPos = new Vector3(centerPoint.x, centerPoint.y, centerPoint.z - 15f);
+        Vector3 endPos = new Vector3(endPoint.x, endPoint.y, endPoint.z - 15f);
+        Vector3 currentInnerPosition = Vector3.Lerp(startPos, endPos, movementProgress);
+        Vector3 currentOuterPosition = Vector3.Lerp(startPos, endPos, (outerMovementProgress == 0f ? movementProgress : outerMovementProgress));
+        
+        Debug.Log($"[UpdateSpherePositions] Movement progress: {movementProgress}");
+        Debug.Log($"[UpdateSpherePositions] Start Point (centerPoint): {centerPoint}");
+        Debug.Log($"[UpdateSpherePositions] End Point: {endPoint}");
+        Debug.Log($"[UpdateSpherePositions] Current position: {currentInnerPosition}");
         
         // For orientation trials, check individualSphereMovement to determine movement method
         // Single ring system - simplified movement logic
@@ -2292,9 +2315,10 @@ public class GameManager : MonoBehaviour
                 {
                     if (spheres[i] != null)
                     {
-                        // Keep original X,Y positions, only change Z
-                        Vector3 originalPos = spheres[i].transform.position;
-                        spheres[i].transform.position = new Vector3(originalPos.x, originalPos.y, currentInnerZ);
+                        // Move sphere relative to current ring center position
+                        Vector3 originalLocalPos = spheres[i].transform.localPosition; // Position relative to ring parent
+                        Vector3 worldPos = currentInnerPosition + originalLocalPos;
+                        spheres[i].transform.position = worldPos;
                         // Preserve each sphere's original orientation during movement
                     }
                 }
@@ -2305,12 +2329,11 @@ public class GameManager : MonoBehaviour
         }
         else // Parent movement method - used for all non-orientation trials and orientation trials when individualSphereMovement=false
         {
-            // Single ring system - move the ring parent to new Z position
-            Debug.Log($"[UpdateSpherePositions] Moving single ring to Z={currentInnerZ}");
+            // Single ring system - move the ring parent to current position
+            Debug.Log($"[UpdateSpherePositions] Moving single ring to position={currentInnerPosition}");
             if (ringParent != null)
             {
-                Vector3 pos = ringParent.transform.position;
-                ringParent.transform.position = new Vector3(pos.x, pos.y, currentInnerZ);
+                ringParent.transform.position = currentInnerPosition;
             }
         }
         
@@ -2351,10 +2374,15 @@ public class GameManager : MonoBehaviour
         // Destroy previous ring parent if it exists
         if (ringParent != null) Destroy(ringParent);
         
-        // Create new ring parent at the starting Z position to prevent jumps
+        // Create new ring parent at the starting position (centerPoint)
         ringParent = new GameObject("Ring");
-        ringParent.transform.position = new Vector3(center.x, center.y, startingZPosition);
+        Vector3 startPosition = new Vector3(center.x, center.y, center.z - 15f); // Offset by 15 so (0,0,0) is at user position
+        ringParent.transform.position = startPosition;
         ringParent.transform.rotation = Quaternion.identity;
+        
+        Debug.Log($"[CreateRingOfSpheres] Ring created at position: {startPosition}");
+        Debug.Log($"[CreateRingOfSpheres] centerPoint parameter: {center}");
+        Debug.Log($"[CreateRingOfSpheres] User's Start Point setting: {centerPoint}");
         
         // Allocate array for single ring
         spheres = new GameObject[numberOfSpheres];
@@ -2373,15 +2401,13 @@ public class GameManager : MonoBehaviour
             
             // Get appropriate prefab for the trial type
             GameObject prefab = changeOrientation ? stripedSpherePrefab : spherePrefab;
-            GameObject sphere = Instantiate(prefab, position, Quaternion.identity);
+            GameObject sphere = Instantiate(prefab, ringParent.transform); // Create as child first
+            sphere.transform.localPosition = position; // Then set local position
             sphere.transform.localScale = new Vector3(sphereSize, sphereSize, sphereSize);
             sphere.name = $"sphere_{i}";
             
             // Apply generated attributes
             ApplyAttributeToSphere(sphere, sphereColors[i]);
-            
-            // All spheres are selectable in single ring system
-            sphere.transform.parent = ringParent.transform;
             spheres[i] = sphere;
         }
         
@@ -3421,6 +3447,7 @@ public class GameManager : MonoBehaviour
 
     // Simplified sphere creation - purely random attributes within acceptable ranges
 
+    /* DEFUNCT ROTATIONAL CODE - NO LONGER USED IN LINEAR MOTION EXPERIMENT
     // Enum for ring movement type
     private enum RingMovementType { Inner, Outer, Both }
 
@@ -3446,6 +3473,7 @@ public class GameManager : MonoBehaviour
         else
             return RotationalOneDirTrial(sphereToChange, addChange, RingMovementType.Both);
     }
+    */
 
     private bool IsFileLocked(string filePath)
     {
