@@ -1467,34 +1467,32 @@ MonoBehaviour:
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
   participantName: test3
   changeType: 0
-  trainingBlock: 1
-  trialsPerTrainingBlock: 5
-  block1Type: 1
+  trainingBlock: 0
+  trialsPerTrainingBlock: 1
+  block1Type: 2
   block2Type: 0
-  block3Type: 2
+  block3Type: 1
   trialsPerBlock: 3
-  trialLength: 4.5
+  trialLength: 5
   trialStartDelay: 1
-  blinkSpheres: 0
-  blinkDuration: 0.2
   movementSpeed: 2
-  changeDuration: 2
+  changeDuration: 5
   numberOfSpheres: 6
-  ringRadius: 2
+  ringRadius: 0.75
   sphereSaturation: 0.8
   sphereValue: 0.8
-  sphereSize: 0.7
-  centerPoint: {x: 0, y: 0, z: -3}
-  endPoint: {x: 0, y: 0, z: 0}
+  sphereSize: 0.25
+  centerPoint: {x: 0, y: 0, z: 21}
+  endPoint: {x: 0, y: 0, z: 18}
   lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
   highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
   audioSource: {fileID: 575565943}
   soundInterval: 1
-  hueChangeHSV: 0.103
+  hueChangeHSV: 0.291
   luminanceChange: 0.2
   sizeChange: 0.1
-  minSize: 0.525
-  maxSize: 0.8
+  minSize: 0.2
+  maxSize: 0.3
   individualSphereMovement: 0
   orientationChange: 15
   selectedSphere: 
@@ -2339,7 +2337,7 @@ MonoBehaviour:
   trialOpacity: 0.52
   hideGridDuringTrials: 0
   showGridBetweenTrials: 0
-  floorY: -2
+  floorY: -4
   ceilingY: 3
 --- !u!4 &1259672011
 Transform:

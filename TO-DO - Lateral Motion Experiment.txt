@@ -1,11 +1,9 @@
-Proper distance: Start Point 6.
+Make Unity unit of measurement exactly equal to 1m, so we can claim accuracy.
 
-Starting Z position:
 
-- Spheres, same FOV -- Much smaller size and radius. Should be about 4m away -- meaning you close half the distance when you walk towards them.
-- Make a training block: No spheres visible, just to get participants used to walking. Each step should be approx. in the middle of each square -- 0.5m apart.
-	- Optional: Make the squares they should walk a different colour: "You should be at the end of the coloured squares when you are finished your steps."
-- Make a training block: No spheres visible, just to get participants used to walking. Each step should be approx. in the middle of each square -- 0.5m apart.
+- Make each step more magnified in space?
+OR (simpler): Make the spheres smaller and closer. 
+- Make a checkerboard pattern (1m^2) on the floor or grey brick texture on the wall.
 
 
 

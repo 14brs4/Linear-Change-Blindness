@@ -92,22 +92,13 @@ public class GameManager : MonoBehaviour
     public bool changeSize => changeType == ChangeType.Size;
     public bool changeOrientation => changeType == ChangeType.Orientation;
     
-    // Trial length details
-    [Header("General Settings")]
-    [CustomLabel("Trial Length (s)")]
-    public float trialLength = 4f;
-    [CustomLabel("Trial Start Delay (s)")]
-    public float trialStartDelay = 1f; // Delay before trial begins (applies to all trial types)
     [Tooltip("Enable or disable sphere blinking visual cue at the start of trials.")]
     private bool blinkSpheres = false;
     [CustomLabel("Blink Duration (s)")]
     [ConditionalEnable("blinkSpheres", true)]
     private float blinkDuration = 0.3f; // Adjustable blink timing for ring cue
     [CustomLabel("Movement Speed (units/s)")]
-    public float movementSpeed = 2f; // Speed of linear movement towards user in units per second
-    [CustomLabel("Change Duration (s)")]
-    [Tooltip("Duration for gradual sphere changes. 0 = instantaneous. Change occurs from trialLength/2 - changeDuration/2 to trialLength/2 + changeDuration/2.")]
-    public float changeDuration = 0f;
+    private float movementSpeed = 2f; // Speed of linear movement towards user in units per second
     
 
 
@@ -127,28 +118,25 @@ public class GameManager : MonoBehaviour
     // Folder for saving results (always in the unity project folder)
     private string resultsFolder;
 
-    // Sphere details
     [Header("Linear Movement Settings")]
-    [CustomLabel("# of Spheres")]
-    public int numberOfSpheres = 6; // Number of spheres to create in the single ring
-    [CustomLabel("Ring Radius")]
-    public float ringRadius = 2f; // Radius of the ring
+    [CustomLabel("Trial Length (s)")]
+    public float trialLength = 4f;
+    [CustomLabel("Trial Start Delay (s)")]
+    public float trialStartDelay = 1f; // Delay before trial begins (applies to all trial types)
+    [CustomLabel("Change Duration (s)")]
+    [Tooltip("Duration for gradual sphere changes. 0 = instantaneous. Change occurs from trialLength/2 - changeDuration/2 to trialLength/2 + changeDuration/2.")]
+    public float changeDuration = 0f;
 
-    // --- Outer (third) ring settings ---
     // Change details (note: to change details about orientation stripes go to the stripes material in the materials folder)
     [Range(0f, 1f)] private float defaultHue = 0f;
-
-    [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
-    [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
-    public float sphereSize = 0.7f;
     [Tooltip("When enabled, the inactive ring maintains default appearance (no randomization of hue, saturation, value, or size).")]
     [CustomLabel("Start Point")]
     public Vector3 centerPoint = Vector3.zero; // Starting position of the ring (spheres move from here to endPoint)
         // Movement distance now defined by difference between centerPoint and endPoint
     public Vector3 endPoint = new Vector3(0f, 0f, -3f); // Where spheres move to during trials (negative Z = toward player)
     // --- Audio cue fields ---
-    public AudioClip lowSound; // Assign normal beep in Inspector
-    public AudioClip highSound; // Assign high-pitch beep in Inspector
+    private AudioClip lowSound; // Assign normal beep in Inspector
+    private AudioClip highSound; // Assign high-pitch beep in Inspector
     [HideInInspector] public AudioSource audioSource; // Assign AudioSource in Inspector
     [CustomLabel("Sound Interval (s)")]
     public float soundInterval = 0.75f; // Time between beeps in seconds
@@ -173,7 +161,7 @@ public class GameManager : MonoBehaviour
     [Header("Luminance Change Settings")]
     [Range(0f, 0.5f)] 
     [Tooltip("Luminance (brightness) change amount for sphere modifications.")]
-    public float luminanceChange = 0.2f;
+    private float luminanceChange = 0.2f;
     
     [Header("Size Change Settings")]
     [Tooltip("Size change amount for sphere scaling.")]
@@ -185,22 +173,28 @@ public class GameManager : MonoBehaviour
     
     [Header("Orientation Change Settings")]
     [Tooltip("When enabled, moves each sphere individually to preserve stripe orientations during linear movement. When disabled, uses more efficient parent movement but sphere orientations may change. Only affects orientation trials.")]
-    public bool individualSphereMovement = false; // Moves all spheres individually instead of using parent movement (less efficient but retains orientations)
+    private bool individualSphereMovement = false; // Moves all spheres individually instead of using parent movement (less efficient but retains orientations)
 
     [CustomLabel("Orientation Change (°)")]
     [Tooltip("Orientation change amount in degrees for striped spheres.")]
-    public float orientationChange = 40f;
+    private float orientationChange = 40f;
     
     // Perceptual color weighting system
     [Header("Perceptual Color System")]
     [Tooltip("Use CIEDE2000-based perceptually-weighted hue generation instead of uniform random. When false, uses simple uniform HSV distribution.")]
     private bool weightedHueGeneration = false;
     
-    
-    
     [Tooltip("Debug: Log the perceptual weight distribution to console for analysis.")]
     private bool debugPerceptualWeights = false;
 
+    [Header("Default Sphere Settings")]
+    [CustomLabel("# of Spheres")]
+    public int numberOfSpheres = 6; // Number of spheres to create in the single ring
+    [CustomLabel("Ring Radius")]
+    public float ringRadius = 2f; // Radius of the ring
+    [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
+    [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
+    public float sphereSize = 0.7f;
 
     // Using purely random attribute generation within acceptable ranges - no similarity checks
 
@@ -621,48 +615,45 @@ public class GameManager : MonoBehaviour
         Vector3 headPosition = mainCamera.transform.position;
         Vector3 headForward = mainCamera.transform.forward;
         
-        // METHOD 1: Try native VR tracking origin recenter (best approach)
+        Debug.Log($"[Recenter] BEFORE recentering - Head position: {headPosition}");
+        Debug.Log($"[Recenter] Making head position become world origin (0,0,0)");
+        
+        // Calculate how much to rotate to align Unity forward (Z+) with head forward
+        Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
+        float angleToRotate = Vector3.SignedAngle(Vector3.forward, horizontalForward, Vector3.up);
+        
+        // METHOD 1: Try native VR tracking origin recenter
         if (TryRecenterVRTrackingOrigin(headPosition, headForward))
         {
-            Debug.Log("[Recenter] Successfully recentered VR tracking origin. Unity world space now aligned with viewer.");
-            // Keep user's centerPoint setting - don't override to Vector3.zero
-            Debug.Log($"[Recenter] Preserving user's Center Point setting: {centerPoint}");
+            Debug.Log("[Recenter] Successfully recentered VR tracking origin - user is now at (0,0,0)");
             return;
         }
         
-        // METHOD 2: If VR tracking recenter fails, try XR Origin rotation
+        // METHOD 2: Move and rotate XR Origin to make user head position become world origin
         if (xrOrigin != null)
         {
-            // Calculate how much to rotate to align Unity forward (Z+) with head forward
-            Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
-            float angleToRotate = Vector3.SignedAngle(Vector3.forward, horizontalForward, Vector3.up);
+            // First: Translate XR Origin so user head becomes world origin (0,0,0)
+            Vector3 offsetToMakeUserOrigin = -headPosition;
+            xrOrigin.Translate(offsetToMakeUserOrigin, Space.World);
             
-            // Rotate the XR Origin to align Unity world space with head direction
-            xrOrigin.RotateAround(headPosition, Vector3.up, -angleToRotate);
+            // Second: Rotate around the new origin to align directions  
+            xrOrigin.RotateAround(Vector3.zero, Vector3.up, -angleToRotate);
             
-            Debug.Log($"[Recenter] Rotated XR Origin by {-angleToRotate}° to align Unity world space with viewer direction");
-            Debug.Log($"[Recenter] Unity Z-axis now points toward viewer. Existing movement code will work unchanged.");
-            
-            // Keep user's centerPoint setting - don't override to Vector3.zero
-            Debug.Log($"[Recenter] Preserving user's Center Point setting: {centerPoint}");
+            Debug.Log($"[Recenter] Translated XR Origin by {offsetToMakeUserOrigin} to make user head (0,0,0)");
+            Debug.Log($"[Recenter] Rotated XR Origin by {-angleToRotate}° around new origin");
+            Debug.Log($"[Recenter] User head is now at world origin (0,0,0)");
         }
         else
         {
-            // Fallback: Manual positioning (your original approach)
-            Debug.LogWarning("[Recenter] Using fallback manual positioning - this is less optimal");
-            
-            // Project the forward vector onto the horizontal plane
-            Vector3 horizontalForward = new Vector3(headForward.x, 0f, headForward.z).normalized;
-            
-            // Keep user's centerPoint setting - don't override with calculated position
-            Debug.Log($"[Recenter] Manual recentering - preserving user's Start Point: {centerPoint}");
-            
-            // Manual repositioning of existing spheres to respect user's Start Point...
+            Debug.LogWarning("[Recenter] No XR Origin found - cannot recenter coordinate system");
         }
         
-        Debug.Log($"[Recenter] Recentering complete. Coordinate system now aligned with viewer.");
+        Debug.Log($"[Recenter] Recentering complete. User head is now at world origin (0,0,0)");
+        Debug.Log($"[Recenter] Start Point and End Point in Inspector now work as absolute world coordinates");
         
-        // Do not automatically move existing rings - preserve trial-specific Start Point positions
+        // Update any existing spheres and ring parent to use the new coordinate system
+        RepositionSpheres();
+        UpdateRingParentPosition();
     }
 
     // Reposition existing spheres around the new center point
@@ -933,6 +924,11 @@ public class GameManager : MonoBehaviour
     // Running trials
     private void StartNewTrial()
     {
+        // FIRST: Automatically recenter coordinate system so user's head becomes (0,0,0)
+        // This ensures spheres always appear in front of the user regardless of roomscale movement
+        RecenterView();
+        Debug.Log("[GameManager] Auto-recentered coordinate system for trial start");
+        
         // Reset ring configuration for each new trial
         // Single ring system - no configuration needed
         Debug.Log("[GameManager] Ring configuration reset for new trial");
