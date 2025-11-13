@@ -1467,6 +1467,8 @@ MonoBehaviour:
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
   participantName: test3
   changeType: 0
+  trainingBlock: 1
+  trialsPerTrainingBlock: 5
   block1Type: 1
   block2Type: 0
   block3Type: 2
@@ -2321,7 +2323,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6be9839edbe69746adc645f17630f8f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridSquareSize: 0.5
+  gridSquareSize: 0.75
   gridExtentX: 15
   gridExtentZ: 25
   wallHeight: 4
@@ -2332,6 +2334,8 @@ MonoBehaviour:
   enableFloorGrid: 1
   enableCeilingGrid: 0
   enableWallGrids: 0
+  showGuidePath: 0
+  guidePathColor: {r: 1, g: 0, b: 0, a: 1}
   trialOpacity: 0.52
   hideGridDuringTrials: 0
   showGridBetweenTrials: 0

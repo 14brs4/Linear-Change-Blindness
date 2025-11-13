@@ -1,3 +1,5 @@
+Proper distance: Start Point 6.
+
 Starting Z position:
 
 - Spheres, same FOV -- Much smaller size and radius. Should be about 4m away -- meaning you close half the distance when you walk towards them.

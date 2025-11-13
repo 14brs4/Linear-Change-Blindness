@@ -99,10 +99,10 @@ public class GameManager : MonoBehaviour
     [CustomLabel("Trial Start Delay (s)")]
     public float trialStartDelay = 1f; // Delay before trial begins (applies to all trial types)
     [Tooltip("Enable or disable sphere blinking visual cue at the start of trials.")]
-    public bool blinkSpheres = true;
+    private bool blinkSpheres = false;
     [CustomLabel("Blink Duration (s)")]
     [ConditionalEnable("blinkSpheres", true)]
-    public float blinkDuration = 0.3f; // Adjustable blink timing for ring cue
+    private float blinkDuration = 0.3f; // Adjustable blink timing for ring cue
     [CustomLabel("Movement Speed (units/s)")]
     public float movementSpeed = 2f; // Speed of linear movement towards user in units per second
     [CustomLabel("Change Duration (s)")]
@@ -416,16 +416,27 @@ public class GameManager : MonoBehaviour
         Debug.Log("[TrialBlocks] A button input DISABLED during break screen. Only spacebar will work.");
         
         Debug.Log($"[TrialBlocks] Break time! Block {currentBlock} completed. Waiting for spacebar...");
+        Debug.Log($"[TrialBlocks] Current state - isInBreakScreen: {isInBreakScreen}, blackScreenUp: {blackScreenUp}, experimentRunning: {experimentRunning}");
         
         // Start listening for spacebar input
-        StartCoroutine(WaitForSpacebarToContinue());
+        Debug.Log("[TrialBlocks] Starting WaitForSpacebarToContinue coroutine...");
+        Coroutine spacebarCoroutine = StartCoroutine(WaitForSpacebarToContinue());
+        Debug.Log($"[TrialBlocks] Spacebar coroutine started: {spacebarCoroutine}");
     }
     
     // Coroutine to wait for spacebar input
     private System.Collections.IEnumerator WaitForSpacebarToContinue()
     {
+        Debug.Log("[TrialBlocks] WaitForSpacebarToContinue coroutine started. Listening for spacebar...");
+        
         while (true)
         {
+            // Debug any key input to verify Input system is working
+            if (Input.anyKeyDown)
+            {
+                Debug.Log($"[TrialBlocks] Any key detected. Space pressed: {Input.GetKeyDown(KeyCode.Space)}");
+            }
+            
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 Debug.Log("[TrialBlocks] Spacebar pressed. Continuing to next block...");
