@@ -162,8 +162,10 @@ public class GameManager : MonoBehaviour
     [Tooltip("Size change amount for sphere scaling.")]
     public float sizeChange = 0.2f;
     [Tooltip("Minimum allowed sphere size.")]
+    [CustomLabel("Min Sphere Size")]
     public float minSize = 0.5f;
     [Tooltip("Maximum allowed sphere size.")]
+    [CustomLabel("Max Sphere Size")]
     public float maxSize = 1.5f;
     
     [Header("Orientation Change Settings")]
@@ -187,14 +189,14 @@ public class GameManager : MonoBehaviour
     public int numberOfSpheres = 6; // Number of spheres to create in the single ring
     public float sphereSize = 0.7f;
     public float ringRadius = 2f; // Radius of the ring
-    [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
-    [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
+    [HideInInspector] [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
+    [HideInInspector] [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
 
     [Header("Audio Settings")]
     [CustomLabel("Sound Interval (s)")]
     public float soundInterval = 0.75f; // Time between beeps in seconds
-    public AudioClip lowSound; // Assign normal beep in Inspector
-    public AudioClip highSound; // Assign high-pitch beep in Inspector
+    [HideInInspector] public AudioClip lowSound; // Assign normal beep in Inspector
+    [HideInInspector] public AudioClip highSound; // Assign high-pitch beep in Inspector
     [HideInInspector] public AudioSource audioSource; // Assign AudioSource in Inspector
     
 
@@ -1059,9 +1061,8 @@ public class GameManager : MonoBehaviour
         
         trialResults[3] = movementTypeForCSV;
         
-        // Generate spheres and execute trial
-        string[] allColors = GenerateSpheresForTrial();
-        ExecuteTrial(sphereToChange, addChange, trialType, allColors);
+        // Execute trial (each trial type will generate its own spheres)
+        ExecuteTrial(sphereToChange, addChange, trialType);
     }
     
     // Execute training trial (grid only, no spheres)
@@ -1175,8 +1176,10 @@ public class GameManager : MonoBehaviour
 
     
     // Execute a trial with given parameters and sphere colors
-    private void ExecuteTrial(int sphereToChange, bool addChange, string trialType, string[] allColors)
+    private void ExecuteTrial(int sphereToChange, bool addChange, string trialType)
     {
+        string[] allColors = new string[numberOfSpheres];
+        
         // Fill trialResults with all sphere colors
         if (allColors != null && trialResults.Length > 23)
         {
@@ -2205,6 +2208,12 @@ public class GameManager : MonoBehaviour
 
     private System.Collections.IEnumerator LinearMovementCoroutine(int sphereToChange, bool addChange)
     {
+        // Generate spheres at the original centerPoint (start position)
+        DestroySpheres();
+        if (focusPointText != null)
+            focusPointText.enabled = true;
+        CreateRingOfSpheres(centerPoint);
+        
         canClick = false;
         trialActive = true;
         
@@ -2726,8 +2735,28 @@ public class GameManager : MonoBehaviour
     }
 
     // Make a random change to static spheres (note: using coroutines here to help with the fact that this code has to wait for trial times)
-    System.Collections.IEnumerator StaticChange(int sphereToChange, bool addChange)
+    System.Collections.IEnumerator StaticChange(int sphereToChange, bool addChange, bool isObserverMotionTrial = false)
     {
+        // Store original centerPoint
+        Vector3 originalCenterPoint = centerPoint;
+        
+        // For static trials, set centerPoint to midpoint between start and end
+        if (!isObserverMotionTrial)
+        {
+            centerPoint = new Vector3(
+                (originalCenterPoint.x + endPoint.x) / 2f,
+                (originalCenterPoint.y + endPoint.y) / 2f,
+                (originalCenterPoint.z + endPoint.z) / 2f
+            );
+        }
+        // Observer motion trials keep original centerPoint (no change needed)
+        
+        // Generate spheres at the (potentially modified) centerPoint
+        DestroySpheres();
+        if (focusPointText != null)
+            focusPointText.enabled = true;
+        CreateRingOfSpheres(centerPoint);
+        
         canClick = false; // Disable clicking during this phase
         trialActive = true;
         
@@ -2835,18 +2864,23 @@ public class GameManager : MonoBehaviour
         if (!trialActive) 
         {
             Debug.Log("[StaticTrial] Trial ended by user interaction");
+            // Restore original centerPoint before ending
+            centerPoint = originalCenterPoint;
             yield break;
         }
         
         // Record all motion stop time
         allMotionStopTime = Time.time;
+        
+        // Restore original centerPoint before ending
+        centerPoint = originalCenterPoint;
     }
 
     // Observer Motion wrapper - identical to Static trials but labeled differently for CSV
     System.Collections.IEnumerator ObserverMotionChange(int sphereToChange, bool addChange)
     {
-        // Simply call the StaticChange coroutine - behavior is identical to Static
-        yield return StartCoroutine(StaticChange(sphereToChange, addChange));
+        // Call StaticChange with isObserverMotionTrial = true to spawn at start point
+        yield return StartCoroutine(StaticChange(sphereToChange, addChange, true));
     }
 
     // Make a random change and move spheres
