@@ -89,10 +89,10 @@ public class GameManager : MonoBehaviour
     // Helper properties for backward compatibility
     public bool changeHue => changeType == ChangeType.Hue;
     //public bool changeLuminance => changeType == ChangeType.Luminance;
-    public bool changeLuminance = false;
+    [HideInInspector] public bool changeLuminance = false;
     public bool changeSize => changeType == ChangeType.Size;
     //public bool changeOrientation => changeType == ChangeType.Orientation;
-    public bool changeOrientation = false;
+    [HideInInspector] public bool changeOrientation = false;
     
     [Tooltip("Enable or disable sphere blinking visual cue at the start of trials.")]
     private bool blinkSpheres = false;
