@@ -21,23 +21,23 @@ public class SpatialGridManager : MonoBehaviour
     public float gridSquareSize = 1.0f;
     
     [Tooltip("Grid size along X-axis (how far the grid extends left/right from center)")]
-    public float gridExtentX = 15.0f;
+    [HideInInspector] public float gridExtentX = 15.0f;
     
     [Tooltip("Grid size along Z-axis (how far the grid extends forward/back from center)")]
-    public float gridExtentZ = 25.0f;
+    [HideInInspector] public float gridExtentZ = 25.0f;
     
     [Tooltip("Height of the walls in meters")]
-    public float wallHeight = 4.0f;
+    [HideInInspector] public float wallHeight = 4.0f;
     
     [Header("Wireframe Grid Appearance")]
     [Tooltip("Background color for the grid surfaces")]
-    public Color backgroundColor = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
+    [HideInInspector] public Color backgroundColor = new Color(0.192f, 0.192f, 0.192f, 1.0f); // Unity's default fog color
     
     [Tooltip("Enable background fill (uncheck for transparent wireframe only)")]
-    public bool enableBackground = true;
+    [HideInInspector] public bool enableBackground = true;
     
     [Tooltip("Grid line color")]
-    public Color lineColor = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Darker grey for lines
+    [HideInInspector] public Color lineColor = new Color(0.13f, 0.13f, 0.13f, 1.0f); // Darker grey for lines
     
     [Tooltip("Width of grid lines in texture pixels (higher = thicker lines)")]
     [Range(1, 32)]
@@ -45,40 +45,40 @@ public class SpatialGridManager : MonoBehaviour
     
     [Header("Grid Components")]
     [Tooltip("Enable floor grid")]
-    public bool enableFloorGrid = true;
+    [HideInInspector] public bool enableFloorGrid = true;
     
     [Tooltip("Enable ceiling grid")]
-    public bool enableCeilingGrid = true;
+    [HideInInspector] public bool enableCeilingGrid = true;
     
     [Tooltip("Enable wall grids")]
-    public bool enableWallGrids = true;
+    [HideInInspector] public bool enableWallGrids = true;
     
     [Header("Guide Path")]
     [Tooltip("When to show the guide path")]
     public GuidePathMode showGuidePath = GuidePathMode.TrainingBlockOnly;
 
     [Tooltip("Color for highlighted path squares during training")]
-    public Color guidePathColor = Color.red;
+    [HideInInspector] public Color guidePathColor = Color.red;
     private Material highlightMaterial;
     private System.Collections.Generic.List<Vector3> originalPositions = new System.Collections.Generic.List<Vector3>();
 
     [Header("Trial Behavior")]
     [Tooltip("Grid opacity during active trials (0.0 = invisible, 1.0 = full visibility)")]
     [Range(0.0f, 1.0f)]
-    public float trialOpacity = 0.3f;
+    [HideInInspector] public float trialOpacity = 0.3f;
     
     [Tooltip("Hide grid completely during trials")]
-    public bool hideGridDuringTrials = false;
+    [HideInInspector] public bool hideGridDuringTrials = false;
     
     [Tooltip("Show grid between trials (black screens, break screens)")]
-    public bool showGridBetweenTrials = false;
+    [HideInInspector] public bool showGridBetweenTrials = false;
     
     [Header("Grid Position")]
     [Tooltip("Y position of the floor grid (should be at ground level for VR user)")]
     public float floorY = -1.5f;
     
     [Tooltip("Y position of the ceiling grid")]
-    public float ceilingY = 3.0f;
+    [HideInInspector] public float ceilingY = 3.0f;
     
     // Materials
     private Material baseMaterial;
@@ -678,14 +678,14 @@ public class SpatialGridManager : MonoBehaviour
         
         Debug.Log($"[GuidePath] Calculated grid indices: ({userGridX}, {userGridZ}) from position ({userPosition.x}, {userPosition.z})");
         
-        // Define which grid squares to highlight (zigzag path forward from user, shifted right)
+        // Define which grid squares to highlight (zigzag path forward from user, shifted left)
         Vector2Int[] pathSquares = new Vector2Int[5]
         {
-            new Vector2Int(userGridX + 1, userGridZ),     // User position shifted right (bottom square)
-            new Vector2Int(userGridX, userGridZ + 1),     // Forward-center (O X pattern row 1)
-            new Vector2Int(userGridX + 1, userGridZ + 2), // Forward-right (X O pattern row 2) 
-            new Vector2Int(userGridX, userGridZ + 3),     // Forward-center (O X pattern row 3)
-            new Vector2Int(userGridX + 1, userGridZ + 4)  // Forward-right (X O pattern row 4)
+            new Vector2Int(userGridX, userGridZ),         // User position at center (bottom square)
+            new Vector2Int(userGridX - 1, userGridZ + 1), // Forward-left (X O pattern row 1)
+            new Vector2Int(userGridX, userGridZ + 2),     // Forward-center (O X pattern row 2) 
+            new Vector2Int(userGridX - 1, userGridZ + 3), // Forward-left (X O pattern row 3)
+            new Vector2Int(userGridX, userGridZ + 4)      // Forward-center (O X pattern row 4)
         };
 
         

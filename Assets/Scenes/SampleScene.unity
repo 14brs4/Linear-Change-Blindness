@@ -1022,7 +1022,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 7
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!82 &575565943
 AudioSource:
@@ -1469,32 +1469,30 @@ MonoBehaviour:
   changeType: 0
   trainingBlock: 0
   trialsPerTrainingBlock: 1
-  block1Type: 2
-  block2Type: 0
-  block3Type: 1
+  block1Type: 0
+  block2Type: 1
+  block3Type: 0
   trialsPerBlock: 3
+  changeLuminance: 0
+  changeOrientation: 0
   trialLength: 5
   trialStartDelay: 1
-  movementSpeed: 2
-  changeDuration: 5
-  numberOfSpheres: 6
-  ringRadius: 0.75
-  sphereSaturation: 0.8
-  sphereValue: 0.8
-  sphereSize: 0.25
-  centerPoint: {x: 0, y: 0, z: 21}
-  endPoint: {x: 0, y: 0, z: 18}
-  lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
-  highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
-  audioSource: {fileID: 575565943}
-  soundInterval: 1
-  hueChangeHSV: 0.291
-  luminanceChange: 0.2
+  changeDuration: 2.5
+  centerPoint: {x: 0, y: 0, z: 6}
+  endPoint: {x: 0, y: 0, z: 3}
+  hueChangeHSV: 0.302
   sizeChange: 0.1
   minSize: 0.2
   maxSize: 0.3
-  individualSphereMovement: 0
-  orientationChange: 15
+  numberOfSpheres: 6
+  sphereSize: 0.25
+  ringRadius: 0.75
+  sphereSaturation: 0.8
+  sphereValue: 0.8
+  soundInterval: 1
+  lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
+  highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
+  audioSource: {fileID: 575565943}
   selectedSphere: 
   success: 
   blackScreen: {fileID: 1253311034}
@@ -1515,7 +1513,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &842968983
 GameObject:
@@ -2321,7 +2319,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6be9839edbe69746adc645f17630f8f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridSquareSize: 0.75
+  gridSquareSize: 0.625
   gridExtentX: 15
   gridExtentZ: 25
   wallHeight: 4
@@ -2332,12 +2330,12 @@ MonoBehaviour:
   enableFloorGrid: 1
   enableCeilingGrid: 0
   enableWallGrids: 0
-  showGuidePath: 0
+  showGuidePath: 1
   guidePathColor: {r: 1, g: 0, b: 0, a: 1}
   trialOpacity: 0.52
   hideGridDuringTrials: 0
   showGridBetweenTrials: 0
-  floorY: -4
+  floorY: -2
   ceilingY: 3
 --- !u!4 &1259672011
 Transform:
@@ -4058,7 +4056,7 @@ RectTransform:
   - {fileID: 2035459157}
   - {fileID: 1253311035}
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -4268,7 +4266,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2082359299
 MonoBehaviour:

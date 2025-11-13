@@ -185,11 +185,10 @@ public class GameManager : MonoBehaviour
     [Header("Default Sphere Settings")]
     [CustomLabel("# of Spheres")]
     public int numberOfSpheres = 6; // Number of spheres to create in the single ring
-    [CustomLabel("Ring Radius")]
+    public float sphereSize = 0.7f;
     public float ringRadius = 2f; // Radius of the ring
     [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
     [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
-    public float sphereSize = 0.7f;
 
     [Header("Audio Settings")]
     [CustomLabel("Sound Interval (s)")]
