@@ -12,9 +12,9 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 public enum ChangeType
 {
     Hue,
-    Luminance,
-    Size,
-    Orientation
+    //Luminance,
+    Size//,
+    //Orientation
 }
 
 public enum MotionType
@@ -88,9 +88,11 @@ public class GameManager : MonoBehaviour
 
     // Helper properties for backward compatibility
     public bool changeHue => changeType == ChangeType.Hue;
-    public bool changeLuminance => changeType == ChangeType.Luminance;
+    //public bool changeLuminance => changeType == ChangeType.Luminance;
+    public bool changeLuminance = false;
     public bool changeSize => changeType == ChangeType.Size;
-    public bool changeOrientation => changeType == ChangeType.Orientation;
+    //public bool changeOrientation => changeType == ChangeType.Orientation;
+    public bool changeOrientation = false;
     
     [Tooltip("Enable or disable sphere blinking visual cue at the start of trials.")]
     private bool blinkSpheres = false;
@@ -134,13 +136,6 @@ public class GameManager : MonoBehaviour
     public Vector3 centerPoint = Vector3.zero; // Starting position of the ring (spheres move from here to endPoint)
         // Movement distance now defined by difference between centerPoint and endPoint
     public Vector3 endPoint = new Vector3(0f, 0f, -3f); // Where spheres move to during trials (negative Z = toward player)
-    // --- Audio cue fields ---
-    private AudioClip lowSound; // Assign normal beep in Inspector
-    private AudioClip highSound; // Assign high-pitch beep in Inspector
-    [HideInInspector] public AudioSource audioSource; // Assign AudioSource in Inspector
-    [CustomLabel("Sound Interval (s)")]
-    public float soundInterval = 0.75f; // Time between beeps in seconds
-    
     
     [Tooltip("Use CIEDE2000-based perceptually uniform hue changes for sphere color modifications. When false, uses simple HSV hue changes.")]
     private bool weightedHueChange = false;
@@ -195,6 +190,14 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float sphereSaturation = 0.8f; // Fixed Saturation (0 to 1)
     [Range(0f, 1f)] public float sphereValue = 0.8f; // Fixed Value (0 to 1)
     public float sphereSize = 0.7f;
+
+    [Header("Audio Settings")]
+    [CustomLabel("Sound Interval (s)")]
+    public float soundInterval = 0.75f; // Time between beeps in seconds
+    public AudioClip lowSound; // Assign normal beep in Inspector
+    public AudioClip highSound; // Assign high-pitch beep in Inspector
+    [HideInInspector] public AudioSource audioSource; // Assign AudioSource in Inspector
+    
 
     // Using purely random attribute generation within acceptable ranges - no similarity checks
 
@@ -2445,8 +2448,8 @@ public class GameManager : MonoBehaviour
         
         // Calculate current position based on movement progress (0 = start at centerPoint, 1 = end at endPoint)
         // Use absolute positions: interpolate from centerPoint to endPoint with Z offset for user position
-        Vector3 startPos = new Vector3(centerPoint.x, centerPoint.y, centerPoint.z - 15f);
-        Vector3 endPos = new Vector3(endPoint.x, endPoint.y, endPoint.z - 15f);
+        Vector3 startPos = new Vector3(centerPoint.x, centerPoint.y, centerPoint.z);
+        Vector3 endPos = new Vector3(endPoint.x, endPoint.y, endPoint.z);
         Vector3 currentInnerPosition = Vector3.Lerp(startPos, endPos, movementProgress);
         Vector3 currentOuterPosition = Vector3.Lerp(startPos, endPos, (outerMovementProgress == 0f ? movementProgress : outerMovementProgress));
         
@@ -2528,7 +2531,7 @@ public class GameManager : MonoBehaviour
         
         // Create new ring parent at the starting position (centerPoint)
         ringParent = new GameObject("Ring");
-        Vector3 startPosition = new Vector3(center.x, center.y, center.z - 15f); // Offset by 15 so (0,0,0) is at user position
+        Vector3 startPosition = new Vector3(center.x, center.y, center.z);
         ringParent.transform.position = startPosition;
         ringParent.transform.rotation = Quaternion.identity;
         
