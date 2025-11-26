@@ -1,32 +1,47 @@
-Make Unity unit of measurement exactly equal to 1m, so we can claim accuracy.
+IMPORTANT:
+(DONE) Ensure Unity unit of measurement is exactly equal to 1m, so we can claim accuracy.
+
+Something I just thought about: If Observer Motion DOESN'T happen in Trial Block 1, should the Training Block still happen at the beginning, or directly before it?
+
+Fundamentally, what is the most important thing we are tracking?
+Answer: Does Movement Type affect success rate of change detection?
+The most important variables are Movement Type, and Success Rate.
+Other variables many people would want to know: Movement speed, and Distance from viewer.
+
+I WILL change:
+- Add a variable: Number of Steps.
+- Move Training Block to always be before Observer Motion block.
+- Change Training Block to have unlimited trials; training block ends when experimenter presses Spacebar.
+- Put down some painter's tape on the floor (start and end position) -- determine what lines up with the virtual path. That way experimenter can tell when participant is walking the correct distance.
+- Ensure 1 Unity unit precisely equals 1m.
+	- Use measuring tape to measure precisely 2 metres, and then make the path with 2 units in Unity. If they line up, Unity is accurate.
+- Add column in CSV called "Distance From Observer" -- It is Start Point's Z value.
+- Always set End Point to be 0,0,(Start Point's Z)/2. (Motion ending precisely halfway between the sphere start position and the user start position)
+- Always set Grid Square Size to be (Start Point's Z)/4/2. (Observer always takes 4 steps and covers 1/2 of the distance to the spheres.)
+- Always set Sound Interval to be (Trial Length)/4. (In object motion trials, motion lasts for entire trial length. Observer motion trials should be the same. As observer always takes 4 steps, this guides the observer to stop moving at the end of the trial length.
+
+Some errors that need fixing in the CSV:
+
+1) Trial Number is currently including Training Trials, when it should not. Counting should only begin at actual (static/observer motion/object motion) trials.
+
+2) Change Start Time and Change End Time are not resetting to 0 at the beginning of the trial when they should. If a trial is 5 seconds and change duration is 2.5, one would expect the change start time to be approx 1.25 and the change end time to be approx 3.75.
+
+3) The columns Blink Spheres, Blink Duration, Rotation Speed, Sphere Saturation, and Sphere Value should be removed.
+
+4) The column Radius should be renamed to Ring Radius.
+
+4) The column Trial Length (s) should be moved to the left of the column Trial Start Delay (s). The column Sphere Size should be moved to the left of Ring Radius.
+
+4) These columns should be added, to the right of the column mentioned after a semi-colon (Example: New column; Other Column):
+- Training Block; Participant
+- Trials per Training Block; Training Block
+- Change Duration (s); Trial Length (s)
+
+Should also add columns for distance from viewer (m) for each trial (different for static and observer motion, for instance), movement speed. Perhaps a way to track movement speed of the user? (I think not -- too much work time would be added, expanding out of scope.)
+
+5) The Sphere 1/2/3/etc. columns are not showing the hue/size values for each sphere.
 
 
-- Make each step more magnified in space?
-OR (simpler): Make the spheres smaller and closer. 
-- Make a checkerboard pattern (1m^2) on the floor or grey brick texture on the wall.
-
-
-
-Question: How do we want the blocks split?
-    - Just two types: Motion and Static?
-    - Or 4 types: Both Moving, Inner Moving, Outer Moving, Static?
-
-- Change Static (unlike Observer Motion) to start at the halfway point of the motion trials. Spheres are too far away.
 - Issues if a sphere is selected too early:
     - CSV does not populate "Before Change" and "After Change" columns with values
     - Ticking sounds stop prematurely
-
-DONE!
-- Create blocks, Set blocks to each have one type of motion each (Observer Motion, Object Motion, Static Motion)
-    - Experimenter sets order beforehand: Block 1 - Dropdown of options, Block 2 - Dropdown of options, etc.
-
-DONE!
-- Remove Rotation-related Columns from CSV: Attendant Ring, Ring Configuration, Ring States, etc.
-
-- See about using the other room.
-
-- Look at adding HTC headset/controller support instead of Oculus (lighter on the head)
-
-- Change Hue Change to be 0-360 instead of 0-1 (degrees on colour wheel)
-
-- Make Orientation trials not crash the program (Fix or remove).

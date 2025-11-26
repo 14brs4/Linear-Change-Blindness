@@ -706,6 +706,7 @@ public class GameManager : MonoBehaviour
 
     // --- Experiment state and timing fields ---
     private bool trialActive = false;
+    private float trialStartTime = 0f; // Time.time when the current trial started (after delay)
     private float changeTime = 0f;
     private float attendantMotionStopTime = 0f;
     private float allMotionStopTime = 0f;
@@ -940,7 +941,7 @@ public class GameManager : MonoBehaviour
         // Ensure grid is in between-trial state (full visibility)
         SetGridForTrialState(false);
         
-        int totalTrials = trialsPerBlock * totalBlocks + (trainingBlock ? trialsPerTrainingBlock : 0);
+        int totalTrials = trialsPerBlock * totalBlocks;
         if (trialNumber >= totalTrials)
         {
             experimentRunning = false;
@@ -979,6 +980,7 @@ public class GameManager : MonoBehaviour
         }
         
         // Reset timing variables for this trial
+        trialStartTime = 0f;
         changeTime = 0f;
         attendantMotionStopTime = 0f;
         allMotionStopTime = 0f;
@@ -1070,7 +1072,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"[TrainingTrial] Starting training trial {currentBlockTrialCount + 1}/{trialsPerTrainingBlock}");
         
-        trialNumber++;
+        // Note: Do not increment trialNumber for training trials as they should not be counted in CSV
         
         // Ensure grid is visible for training
         SetGridForTrialState(false); // Full visibility during training
@@ -1179,7 +1181,7 @@ public class GameManager : MonoBehaviour
     private void ExecuteTrial(int sphereToChange, bool addChange, string trialType)
     {
         string[] allColors = new string[numberOfSpheres];
-        
+
         // Fill trialResults with all sphere colors
         if (allColors != null && trialResults.Length > 23)
         {
@@ -2239,6 +2241,9 @@ public class GameManager : MonoBehaviour
             
         yield return new WaitForSeconds(trialStartDelay);
 
+        // Record trial start time (after delay)
+        trialStartTime = Time.time;
+
         // Calculate when motion is expected to stop
         expectedMotionStopTime = Time.time + trialLength;
 
@@ -2776,7 +2781,7 @@ public class GameManager : MonoBehaviour
         expectedMotionStopTime = 0f;
         
         // Record trial start time (after delay)
-        float trialStartTime = Time.time;
+        trialStartTime = Time.time;
         
         // Only blink if blinkSpheres is enabled
         if (blinkSpheres)
@@ -3518,8 +3523,8 @@ public class GameManager : MonoBehaviour
         trialResults[7] = selectedSphere; // Selected Sphere
         trialResults[8] = success;        // Success
         trialResults[11] = changeTime > 0f ? (sphereClickTime - changeTime).ToString("F3") : ""; // Response Time (After Change Start)
-        trialResults[12] = changeTime > 0f ? changeTime.ToString("F3") : ""; // Change Start Time (s)
-        trialResults[13] = changeTime > 0f && changeDuration > 0f ? (changeTime + changeDuration).ToString("F3") : (changeTime > 0f ? changeTime.ToString("F3") : ""); // Change End Time (s)
+        trialResults[12] = changeTime > 0f && trialStartTime > 0f ? (changeTime - trialStartTime).ToString("F3") : ""; // Change Start Time (s) - relative to trial start
+        trialResults[13] = changeTime > 0f && trialStartTime > 0f && changeDuration > 0f ? (changeTime - trialStartTime + changeDuration).ToString("F3") : (changeTime > 0f && trialStartTime > 0f ? (changeTime - trialStartTime).ToString("F3") : ""); // Change End Time (s) - relative to trial start
         // Removed "Response Time (After motion stops)" column
         // Create a new array with an extra row
         string[][] newResults = new string[results.Length + 1][];

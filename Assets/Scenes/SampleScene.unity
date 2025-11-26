@@ -1465,14 +1465,14 @@ MonoBehaviour:
   interactionManager: {fileID: 1192322633}
   spherePrefab: {fileID: 4520263005337382652, guid: 9dd4a3b97dfb58f4895938a1b7a01d0b, type: 3}
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
-  participantName: test3
-  changeType: 0
-  trainingBlock: 1
-  trialsPerTrainingBlock: 1
-  block1Type: 0
+  participantName: test
+  changeType: 1
+  trainingBlock: 0
+  trialsPerTrainingBlock: 5
+  block1Type: 2
   block2Type: 1
-  block3Type: 2
-  trialsPerBlock: 3
+  block3Type: 0
+  trialsPerBlock: 1
   changeLuminance: 0
   changeOrientation: 0
   trialLength: 5
@@ -1489,7 +1489,7 @@ MonoBehaviour:
   ringRadius: 0.75
   sphereSaturation: 0.8
   sphereValue: 0.8
-  soundInterval: 1
+  soundInterval: 1.25
   lowSound: {fileID: 8300000, guid: 223a03be04bdef4418fa0e489cac170a, type: 3}
   highSound: {fileID: 8300000, guid: 55cebee6e0387c14e9c4cb3af19f25a4, type: 3}
   audioSource: {fileID: 575565943}
@@ -2335,7 +2335,7 @@ MonoBehaviour:
   trialOpacity: 0.52
   hideGridDuringTrials: 0
   showGridBetweenTrials: 0
-  floorY: -2
+  floorY: -2.167
   ceilingY: 3
 --- !u!4 &1259672011
 Transform:
