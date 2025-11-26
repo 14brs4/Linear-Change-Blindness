@@ -227,6 +227,7 @@ public class GameManager : MonoBehaviour
     private int currentBlockTrialCount = 0; // Trials completed in current block
     private int totalBlocks = 3; // Always 3 blocks
     private bool isInBreakScreen = false; // Flag to disable A button during break screens
+    private bool hasRunObserverMotionTraining = false; // Track if Observer Motion training has been completed
 
     // Trial types are now determined by block configuration instead of random selection
     // private string[] trialTypes = { "Static", "Moving" }; // No longer used - blocks determine trial types
@@ -964,10 +965,11 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"[GameManager] GenerateAndExecuteTrial starting for trial {trialNumber + 1}");
         
-        // Check if we're in training block - execute training trial instead
-        if (currentBlock == 0)
+        // Check if this is the first Observer Motion block and we haven't run training yet
+        MotionType currentMotionType = GetCurrentBlockType();
+        if (trainingBlock && currentMotionType == MotionType.ObserverMotion && !hasRunObserverMotionTraining)
         {
-            ExecuteTrainingTrial();
+            StartCoroutine(ExecuteTrainingLoop());
             return;
         }
         
@@ -1021,7 +1023,6 @@ public class GameManager : MonoBehaviour
         bool addChange = Random.Range(0, 2) == 0;
 
         // Determine trial type based on current block instead of random selection
-        MotionType currentMotionType = GetCurrentBlockType();
         string trialType;
         
         switch (currentMotionType)
@@ -1067,18 +1068,47 @@ public class GameManager : MonoBehaviour
         ExecuteTrial(sphereToChange, addChange, trialType);
     }
     
-    // Execute training trial (grid only, no spheres)
-    private void ExecuteTrainingTrial()
+    // Execute training loop that repeats until spacebar is pressed
+    private IEnumerator ExecuteTrainingLoop()
     {
-        Debug.Log($"[TrainingTrial] Starting training trial {currentBlockTrialCount + 1}/{trialsPerTrainingBlock}");
+        Debug.Log("[Training] Starting training loop - will repeat until spacebar is pressed");
         
-        // Note: Do not increment trialNumber for training trials as they should not be counted in CSV
+        bool trainingComplete = false;
         
-        // Ensure grid is visible for training
-        SetGridForTrialState(false); // Full visibility during training
+        while (!trainingComplete)
+        {
+            // Run one training trial
+            yield return StartCoroutine(TrainingTrialCoroutine());
+            
+            // Show message asking user to press spacebar to continue or repeat training
+            Debug.Log("[Training] Training trial complete. Press SPACEBAR to start Observer Motion trials or any other key to repeat training.");
+            
+            bool waitingForInput = true;
+            while (waitingForInput)
+            {
+                if (Input.GetKeyDown(KeyCode.Space))
+                {
+                    trainingComplete = true;
+                    waitingForInput = false;
+                    Debug.Log("[Training] Spacebar pressed - ending training and starting Observer Motion trials");
+                }
+                else if (Input.anyKeyDown && !Input.GetKeyDown(KeyCode.Space))
+                {
+                    waitingForInput = false;
+                    Debug.Log("[Training] Other key pressed - repeating training trial");
+                }
+                yield return null;
+            }
+        }
         
-        // Start training trial coroutine (grid + ticking, wait for button press)
-        StartCoroutine(TrainingTrialCoroutine());
+        // Training is complete - set the flag and reset trial count
+        hasRunObserverMotionTraining = true;
+        currentBlockTrialCount = 0; // Reset for actual Observer Motion trials
+        
+        Debug.Log("[Training] Training complete! Starting Observer Motion trials.");
+        
+        // Start the first actual Observer Motion trial
+        StartNewTrial();
     }
     
     // Training trial coroutine - shows grid with beep sequence, waits for VR trigger press
@@ -1148,10 +1178,10 @@ public class GameManager : MonoBehaviour
         CompleteTrainingTrial();
     }
     
-    // Complete training trial and advance to next
+    // Complete training trial and return to loop
     private void CompleteTrainingTrial()
     {
-        Debug.Log($"[TrainingTrial] Training trial {currentBlockTrialCount + 1} completed");
+        Debug.Log($"[TrainingTrial] Training trial completed");
         
         // Hide training path
         if (spatialGridManager != null)
@@ -1159,19 +1189,8 @@ public class GameManager : MonoBehaviour
             spatialGridManager.HideGuidePath();
         }
         
-        // Increment trial counters
-        currentBlockTrialCount++;
-        
-        // Check if training block is complete
-        if (ShouldTakeBreak())
-        {
-            ShowBreakScreen();
-        }
-        else
-        {
-            // Continue to next training trial
-            StartCoroutine(DelayedNextTrial());
-        }
+        // Note: Training loop completion is now handled in ExecuteTrainingLoop
+        // This method just cleans up after each individual training trial
     }
 
 
