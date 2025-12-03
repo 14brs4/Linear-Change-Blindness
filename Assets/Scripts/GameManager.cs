@@ -227,6 +227,7 @@ public class GameManager : MonoBehaviour
     private int currentBlockTrialCount = 0; // Trials completed in current block
     private int totalBlocks = 3; // Always 3 blocks
     private bool isInBreakScreen = false; // Flag to disable A button during break screens
+    private int firstObserverMotionBlock = 0; // Store which block is the first Observer Motion block
 
     // Trial types are now determined by block configuration instead of random selection
     // private string[] trialTypes = { "Static", "Moving" }; // No longer used - blocks determine trial types
@@ -358,9 +359,22 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[TrialBlocks] Initializing 3-block system with {trialsPerBlock} trials per block");
         Debug.Log($"[TrialBlocks] Block 1: {block1Type}, Block 2: {block2Type}, Block 3: {block3Type}");
         
+        // Find the first Observer Motion block
+        firstObserverMotionBlock = GetFirstObserverMotionBlock();
+        Debug.Log($"[TrialBlocks] First Observer Motion block: {firstObserverMotionBlock}");
+        
         // Reset counters
         currentBlockTrialCount = 0;
-        currentBlock = trainingBlock ? 0 : 1; // Start with training block (0) if enabled, otherwise Block 1
+        currentBlock = 1; // Always start with Block 1
+    }
+    
+    // Find which block is the first Observer Motion block
+    private int GetFirstObserverMotionBlock()
+    {
+        if (block1Type == MotionType.ObserverMotion) return 1;
+        if (block2Type == MotionType.ObserverMotion) return 2;
+        if (block3Type == MotionType.ObserverMotion) return 3;
+        return 0; // No Observer Motion blocks found
     }
     
     // Check if it's time for a break between trial blocks
@@ -400,9 +414,23 @@ public class GameManager : MonoBehaviour
             return;
         }
         
-        string nextBlockType = GetBlockTypeString(GetNextBlockType());
-        
         string blockName = currentBlock == 0 ? "Training Block" : $"Block {currentBlock}";
+        string nextBlockType;
+        
+        // Check if we need to show training block info
+        if (currentBlock == 0) // Coming from training block
+        {
+            nextBlockType = GetBlockTypeString(GetCurrentBlockType()); // This will be the Observer Motion block
+        }
+        else if (trainingBlock && currentBlock + 1 == firstObserverMotionBlock && firstObserverMotionBlock > 0)
+        {
+            nextBlockType = "Training Block (before Observer Motion)";
+        }
+        else
+        {
+            nextBlockType = GetBlockTypeString(GetNextBlockType());
+        }
+        
         string breakMessage = $"{blockName} completed!\n\n" +
                              $"Trials completed: {totalTrialsCompleted} / {totalTrials}\n" +
                              //$"Trials remaining: {trialsRemaining}\n\n" +
@@ -442,8 +470,26 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log("[TrialBlocks] Spacebar pressed. Continuing to next block...");
                 
-                // Start next block
-                currentBlock++;
+                // Check if we need to run training block before the next block
+                if (trainingBlock && currentBlock + 1 == firstObserverMotionBlock && firstObserverMotionBlock > 0)
+                {
+                    // Run training block before Observer Motion
+                    currentBlock = 0; // Training block
+                    Debug.Log($"[TrialBlocks] Starting training block before Block {firstObserverMotionBlock} (Observer Motion)");
+                }
+                else if (currentBlock == 0)
+                {
+                    // Coming from training block, go to the Observer Motion block
+                    currentBlock = firstObserverMotionBlock;
+                    Debug.Log($"[TrialBlocks] Training complete, moving to Block {currentBlock} (Observer Motion)");
+                }
+                else
+                {
+                    // Regular block progression
+                    currentBlock++;
+                    Debug.Log($"[TrialBlocks] Regular progression to Block {currentBlock}");
+                }
+                
                 currentBlockTrialCount = 0;
                 
                 // Go directly to "Press A" message (don't hide black screen yet)

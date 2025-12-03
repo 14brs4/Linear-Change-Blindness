@@ -18,8 +18,8 @@ Other variables many people would want to know: Movement speed, and Distance fro
 
 Changes?
 (NO) - Add a variable: Number of Steps.
-- Move Training Block to always be before Observer Motion block.
-- Change Training Block to have unlimited trials; training block ends when experimenter presses Spacebar.
+(IN PROGRESS) - Move Training Block to always be before Observer Motion block.
+(IN PROGRESS) - Change Training Block to have unlimited trials; training block ends when experimenter presses Spacebar.
 (DONE) - Put down some painter's tape on the floor (start and end position) -- determine what lines up with the virtual path. That way experimenter can tell when participant is walking the correct distance.
 (DONE) - Ensure 1 Unity unit precisely equals 1m.
 (DONE)	- Use measuring tape to measure precisely 2 metres, and then make the path with 2 units in Unity. If they line up, Unity is accurate.
