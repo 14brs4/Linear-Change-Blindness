@@ -365,7 +365,17 @@ public class GameManager : MonoBehaviour
         
         // Reset counters
         currentBlockTrialCount = 0;
-        currentBlock = 1; // Always start with Block 1
+        
+        // If training is enabled and Observer Motion is Block 1, start with training
+        if (trainingBlock && firstObserverMotionBlock == 1)
+        {
+            currentBlock = 0; // Start with training block
+            Debug.Log($"[TrialBlocks] Starting with training block before Block 1 (Observer Motion)");
+        }
+        else
+        {
+            currentBlock = 1; // Start with Block 1 as usual
+        }
     }
     
     // Find which block is the first Observer Motion block
@@ -470,18 +480,17 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log("[TrialBlocks] Spacebar pressed. Continuing to next block...");
                 
-                // Check if we need to run training block before the next block
-                if (trainingBlock && currentBlock + 1 == firstObserverMotionBlock && firstObserverMotionBlock > 0)
-                {
-                    // Run training block before Observer Motion
-                    currentBlock = 0; // Training block
-                    Debug.Log($"[TrialBlocks] Starting training block before Block {firstObserverMotionBlock} (Observer Motion)");
-                }
-                else if (currentBlock == 0)
+                if (currentBlock == 0)
                 {
                     // Coming from training block, go to the Observer Motion block
                     currentBlock = firstObserverMotionBlock;
                     Debug.Log($"[TrialBlocks] Training complete, moving to Block {currentBlock} (Observer Motion)");
+                }
+                else if (trainingBlock && currentBlock + 1 == firstObserverMotionBlock && firstObserverMotionBlock > 1)
+                {
+                    // Only run training if Observer Motion is NOT Block 1 (we already handled that case in initialization)
+                    currentBlock = 0; // Training block
+                    Debug.Log($"[TrialBlocks] Starting training block before Block {firstObserverMotionBlock} (Observer Motion)");
                 }
                 else
                 {
@@ -1137,6 +1146,9 @@ public class GameManager : MonoBehaviour
         
         // Note: Do not increment trialNumber for training trials as they should not be counted in CSV
         
+        // Ensure NO spheres are created for training trials - destroy any existing spheres
+        DestroySpheres();
+        
         // Ensure grid is visible for training
         SetGridForTrialState(false); // Full visibility during training
         
@@ -1189,6 +1201,12 @@ public class GameManager : MonoBehaviour
         if (spatialGridManager != null)
         {
             spatialGridManager.ShowGuidePath(true); // Pass true to indicate this is a training trial
+        }
+        
+        // Disable focal point text since there are no spheres to focus on
+        if (focusPointText != null)
+        {
+            focusPointText.enabled = false;
         }
         
 

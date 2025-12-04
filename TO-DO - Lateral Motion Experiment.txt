@@ -7,6 +7,11 @@ Daryl wants these changes:
 	
 
 IMPORTANT:
+- Fix bugs:
+	- After training block, black screen says next trial will be Static (should say Observer Motion)
+	- Training block not appearing if first block is Observer Motion
+
+
 (DONE) Ensure Unity unit of measurement is exactly equal to 1m, so we can claim accuracy.
 
 Something I just thought about: If Observer Motion DOESN'T happen in Trial Block 1, should the Training Block still happen at the beginning, or directly before it?
