@@ -1,3 +1,11 @@
+
+Daryl wants these changes:
+(DONE) - Remove ability to choose sphere before motion ends
+(DONE?)- Fix sound not working during experiment
+- Move training path so participants step in the middle of the squares.
+	Solution: (Move entire grid back a half square or move starting position up half a square.)
+	
+
 IMPORTANT:
 (DONE) Ensure Unity unit of measurement is exactly equal to 1m, so we can claim accuracy.
 
@@ -8,17 +16,17 @@ Answer: Does Movement Type affect success rate of change detection?
 The most important variables are Movement Type, and Success Rate.
 Other variables many people would want to know: Movement speed, and Distance from viewer.
 
-I WILL change:
-- Add a variable: Number of Steps.
+Changes?
+(NO) - Add a variable: Number of Steps.
 - Move Training Block to always be before Observer Motion block.
 - Change Training Block to have unlimited trials; training block ends when experimenter presses Spacebar.
-- Put down some painter's tape on the floor (start and end position) -- determine what lines up with the virtual path. That way experimenter can tell when participant is walking the correct distance.
-- Ensure 1 Unity unit precisely equals 1m.
-	- Use measuring tape to measure precisely 2 metres, and then make the path with 2 units in Unity. If they line up, Unity is accurate.
-- Add column in CSV called "Distance From Observer" -- It is Start Point's Z value.
-- Always set End Point to be 0,0,(Start Point's Z)/2. (Motion ending precisely halfway between the sphere start position and the user start position)
-- Always set Grid Square Size to be (Start Point's Z)/4/2. (Observer always takes 4 steps and covers 1/2 of the distance to the spheres.)
-- Always set Sound Interval to be (Trial Length)/4. (In object motion trials, motion lasts for entire trial length. Observer motion trials should be the same. As observer always takes 4 steps, this guides the observer to stop moving at the end of the trial length.
+(DONE) - Put down some painter's tape on the floor (start and end position) -- determine what lines up with the virtual path. That way experimenter can tell when participant is walking the correct distance.
+(DONE) - Ensure 1 Unity unit precisely equals 1m.
+(DONE)	- Use measuring tape to measure precisely 2 metres, and then make the path with 2 units in Unity. If they line up, Unity is accurate.
+(NO) - Add column in CSV called "Distance From Observer" -- It is Start Point's Z value.
+(MAYBE) - Always set End Point to be 0,0,(Start Point's Z)/2. (Motion ending precisely halfway between the sphere start position and the user start position)
+(MAYBE) - Always set Grid Square Size to be (Start Point's Z)/4/2. (Observer always takes 4 steps and covers 1/2 of the distance to the spheres.)
+(MAYBE) - Always set Sound Interval to be (Trial Length)/4. (In object motion trials, motion lasts for entire trial length. Observer motion trials should be the same. As observer always takes 4 steps, this guides the observer to stop moving at the end of the trial length.
 
 Some errors that need fixing in the CSV:
 

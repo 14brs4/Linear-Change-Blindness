@@ -257,6 +257,9 @@ public class GameManager : MonoBehaviour
     private Coroutine activeBeepCoroutine = null; // Track the current beep sequence
     private bool beepSequenceAborted = false; // Flag to abort beep sequence
     
+    // Training trial camera adjustment tracking
+    private bool cameraAdjustedForTraining = false;
+    
     // Stop all running gradual change coroutines
     private void StopAllActiveChangeCoroutines()
     {
@@ -1072,6 +1075,20 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"[TrainingTrial] Starting training trial {currentBlockTrialCount + 1}/{trialsPerTrainingBlock}");
         
+        // Move camera forward by half a grid square for training trials
+        float halfSquareDistance = 0.5f; // Default fallback
+        if (spatialGridManager != null)
+        {
+            halfSquareDistance = spatialGridManager.gridSquareSize / 2f;
+            Debug.Log($"[TrainingAdjust] Using grid square size: {spatialGridManager.gridSquareSize}, half distance: {halfSquareDistance}");
+        }
+        else
+        {
+            Debug.LogWarning("[TrainingAdjust] SpatialGridManager not found. Using default half square distance: {halfSquareDistance}");
+        }
+        
+        MoveCameraForTraining(halfSquareDistance);
+        
         // Note: Do not increment trialNumber for training trials as they should not be counted in CSV
         
         // Ensure grid is visible for training
@@ -1079,6 +1096,36 @@ public class GameManager : MonoBehaviour
         
         // Start training trial coroutine (grid + ticking, wait for button press)
         StartCoroutine(TrainingTrialCoroutine());
+    }
+    
+    // Move camera forward for training trials so user starts in center of grid square
+    private void MoveCameraForTraining(float forwardDistance)
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogWarning("[TrainingAdjust] Main camera not found. Cannot adjust position for training.");
+            return;
+        }
+
+        // Move camera forward by the specified distance
+        Vector3 forwardDirection = mainCamera.transform.forward;
+        forwardDirection.y = 0f; // Keep movement horizontal only
+        forwardDirection = forwardDirection.normalized;
+        
+        // Apply camera movement to the XR Origin
+        if (xrOrigin != null)
+        {
+            Vector3 cameraAdjustment = forwardDirection * forwardDistance;
+            xrOrigin.Translate(cameraAdjustment, Space.World);
+            cameraAdjustedForTraining = true;
+            Debug.Log($"[TrainingAdjust] Moved XR Origin forward by {forwardDistance} units for training trial");
+            Debug.Log($"[TrainingAdjust] User now starts in center of grid square");
+        }
+        else
+        {
+            Debug.LogWarning("[TrainingAdjust] XR Origin not found. Cannot adjust camera position.");
+        }
     }
     
     // Training trial coroutine - shows grid with beep sequence, waits for VR trigger press
@@ -1152,6 +1199,14 @@ public class GameManager : MonoBehaviour
     private void CompleteTrainingTrial()
     {
         Debug.Log($"[TrainingTrial] Training trial {currentBlockTrialCount + 1} completed");
+        
+        // Reset camera position if it was adjusted for training
+        if (cameraAdjustedForTraining)
+        {
+            RecenterView(); // This will reset user back to origin
+            cameraAdjustedForTraining = false;
+            Debug.Log($"[TrainingAdjust] Camera position reset for normal trials");
+        }
         
         // Hide training path
         if (spatialGridManager != null)
@@ -3582,7 +3637,7 @@ public class GameManager : MonoBehaviour
         sphereClickTime = Time.time; // Record click time immediately
 
         // Stop any active beep sequence when user interacts
-        StopBeepSequence();
+        //StopBeepSequence();
 
 
 

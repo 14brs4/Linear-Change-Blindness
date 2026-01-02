@@ -1466,22 +1466,22 @@ MonoBehaviour:
   spherePrefab: {fileID: 4520263005337382652, guid: 9dd4a3b97dfb58f4895938a1b7a01d0b, type: 3}
   stripedSpherePrefab: {fileID: 2824418882884257183, guid: 841ad1bfb105bbe4497627788afbcbec, type: 3}
   participantName: test
-  changeType: 1
-  trainingBlock: 0
+  changeType: 0
+  trainingBlock: 1
   trialsPerTrainingBlock: 5
-  block1Type: 2
-  block2Type: 1
+  block1Type: 0
+  block2Type: 2
   block3Type: 0
-  trialsPerBlock: 1
+  trialsPerBlock: 5
   changeLuminance: 0
   changeOrientation: 0
   trialLength: 5
   trialStartDelay: 1
   changeDuration: 2.5
   centerPoint: {x: 0, y: 0, z: 6}
-  endPoint: {x: 0, y: 0, z: 3}
-  hueChangeHSV: 0.25
-  sizeChange: 0.1
+  endPoint: {x: 0, y: 0, z: 4}
+  hueChangeHSV: 0.266
+  sizeChange: 0.12
   minSize: 0.2
   maxSize: 0.3
   numberOfSpheres: 6
