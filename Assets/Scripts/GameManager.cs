@@ -1299,39 +1299,47 @@ public class GameManager : MonoBehaviour
     // Execute a trial with given parameters and sphere colors
     private void ExecuteTrial(int sphereToChange, bool addChange, string trialType)
     {
-        string[] allColors = new string[numberOfSpheres];
-
-        // Fill trialResults with all sphere colors
-        if (allColors != null && trialResults.Length > 23)
-        {
-            int colorCount = Mathf.Min(allColors.Length, trialResults.Length - 23);
-            int colorIndex = 0;
-            
-            // Single ring spheres - start at index 23
-            for (int i = 0; i < numberOfSpheres && (23 + colorIndex) < trialResults.Length; i++)
-            {
-                trialResults[23 + colorIndex] = colorIndex < colorCount ? allColors[colorIndex] : "";
-                colorIndex++;
-            }
-        }
+        string[] sphereColors = null;  // Will hold the actual sphere values
         
         if (trialType == "Static")
         {
             trialNumber++;
             staticTrialsRun++;
-            StartCoroutine(StaticChange(sphereToChange, addChange));
+            // Capture the return value from StaticTrial which creates spheres
+            sphereColors = StaticTrial(sphereToChange, addChange);
         }
         else if (trialType == "Moving")
         {
             trialNumber++;
             movingTrialsRun++;
+            // Create spheres and capture their colors before starting coroutine
+            DestroySpheres();
+            if (focusPointText != null)
+                focusPointText.enabled = true;
+            sphereColors = CreateRingOfSpheres(centerPoint);
             StartCoroutine(LinearMovementCoroutine(sphereToChange, addChange));
         }
         else if (trialType == "ObserverMotion")
         {
             trialNumber++;
             staticTrialsRun++; // Count as static trials since behavior is identical
+            // Create spheres and capture their colors before starting coroutine
+            DestroySpheres();
+            if (focusPointText != null)
+                focusPointText.enabled = true;
+            sphereColors = CreateRingOfSpheres(centerPoint);
             StartCoroutine(ObserverMotionChange(sphereToChange, addChange));
+        }
+        
+        // NOW fill trialResults with the ACTUAL captured sphere colors
+        if (sphereColors != null && trialResults.Length > 23)
+        {
+            int colorCount = Mathf.Min(sphereColors.Length, trialResults.Length - 23);
+            
+            for (int i = 0; i < colorCount; i++)
+            {
+                trialResults[23 + i] = sphereColors[i];  // Use actual values
+            }
         }
     }
     
@@ -2172,11 +2180,25 @@ public class GameManager : MonoBehaviour
     // Run a static trial
     private string[] StaticTrial(int sphereToChange, bool addChange)
     {
+        // Store original centerPoint
+        Vector3 originalCenterPoint = centerPoint;
+        
+        // For static trials, set centerPoint to midpoint between start and end
+        centerPoint = new Vector3(
+            (originalCenterPoint.x + endPoint.x) / 2f,
+            (originalCenterPoint.y + endPoint.y) / 2f,
+            (originalCenterPoint.z + endPoint.z) / 2f
+        );
+        
         // Ring configuration is already determined in StartNewTrial
         DestroySpheres();
         if (focusPointText != null)
             focusPointText.enabled = true;
         string[] sphereColors = CreateRingOfSpheres(centerPoint);
+        
+        // Restore original centerPoint for next trial
+        centerPoint = originalCenterPoint;
+        
         StartCoroutine(StaticChange(sphereToChange, addChange));
         return sphereColors;
     }
@@ -2329,11 +2351,7 @@ public class GameManager : MonoBehaviour
 
     private System.Collections.IEnumerator LinearMovementCoroutine(int sphereToChange, bool addChange)
     {
-        // Generate spheres at the original centerPoint (start position)
-        DestroySpheres();
-        if (focusPointText != null)
-            focusPointText.enabled = true;
-        CreateRingOfSpheres(centerPoint);
+        // Note: Spheres are already created before this coroutine starts (in ExecuteTrial)
         
         canClick = false;
         trialActive = true;
@@ -2863,25 +2881,8 @@ public class GameManager : MonoBehaviour
     // Make a random change to static spheres (note: using coroutines here to help with the fact that this code has to wait for trial times)
     System.Collections.IEnumerator StaticChange(int sphereToChange, bool addChange, bool isObserverMotionTrial = false)
     {
-        // Store original centerPoint
-        Vector3 originalCenterPoint = centerPoint;
-        
-        // For static trials, set centerPoint to midpoint between start and end
-        if (!isObserverMotionTrial)
-        {
-            centerPoint = new Vector3(
-                (originalCenterPoint.x + endPoint.x) / 2f,
-                (originalCenterPoint.y + endPoint.y) / 2f,
-                (originalCenterPoint.z + endPoint.z) / 2f
-            );
-        }
-        // Observer motion trials keep original centerPoint (no change needed)
-        
-        // Generate spheres at the (potentially modified) centerPoint
-        DestroySpheres();
-        if (focusPointText != null)
-            focusPointText.enabled = true;
-        CreateRingOfSpheres(centerPoint);
+        // Note: Spheres are already created before this coroutine starts
+        // (created in StaticTrial or in ExecuteTrial for ObserverMotion)
         
         canClick = false; // Disable clicking during this phase
         trialActive = true;
@@ -2991,16 +2992,11 @@ public class GameManager : MonoBehaviour
         if (!trialActive) 
         {
             Debug.Log("[StaticTrial] Trial ended by user interaction");
-            // Restore original centerPoint before ending
-            centerPoint = originalCenterPoint;
             yield break;
         }
         
         // Record all motion stop time
         allMotionStopTime = Time.time;
-        
-        // Restore original centerPoint before ending
-        centerPoint = originalCenterPoint;
     }
 
     // Observer Motion wrapper - identical to Static trials but labeled differently for CSV
