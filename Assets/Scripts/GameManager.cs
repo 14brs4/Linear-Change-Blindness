@@ -285,10 +285,10 @@ public class GameManager : MonoBehaviour
     }
     
     // Enable clicking when the change starts (for static trials)
-    private System.Collections.IEnumerator EnableClickingWhenChangeStarts(float changeStartTime)
+    private System.Collections.IEnumerator EnableClickingWhenChangeEnds(float changeFinishTime)
     {
         // Wait until the change starts
-        while (Time.time < changeStartTime)
+        while (Time.time < changeFinishTime)
         {
             yield return null;
         }
@@ -430,7 +430,7 @@ public class GameManager : MonoBehaviour
         // Check if we need to show training block info
         if (currentBlock == 0) // Coming from training block
         {
-            nextBlockType = GetBlockTypeString(GetCurrentBlockType()); // This will be the Observer Motion block
+            nextBlockType = "Observer Motion";
         }
         else if (trainingBlock && currentBlock + 1 == firstObserverMotionBlock && firstObserverMotionBlock > 0)
         {
@@ -2440,7 +2440,9 @@ public class GameManager : MonoBehaviour
                         
                         changeApplied = true;
                         changeTime = changeStartTime;
-                        canClick = true;
+                        // Calculate when the change ends and enable clicking then
+                        float changeEndTime = changeStartTime + effectiveChangeDuration;
+                        StartCoroutine(EnableClickingWhenChangeEnds(changeEndTime));
                         // Note: Linear movement continues in the same direction (towards user)
                     }
                 }
@@ -2935,6 +2937,7 @@ public class GameManager : MonoBehaviour
             sphereManager.SetChanged(true);
             
             float changeStartTime = trialStartTime + changeStartFromTrialBeginning;
+            float changeFinishTime = changeStartTime + changeDuration;
             Coroutine changeCoroutine = StartCoroutine(GradualChangeSphere(selectedSphere, addChange, changeStartTime, effectiveChangeDuration));
             activeChangeCoroutines.Add(changeCoroutine);
             
@@ -2943,7 +2946,7 @@ public class GameManager : MonoBehaviour
             attendantMotionStopTime = changeStartTime;
             
             // Enable clicking when change starts (not when beeps finish)
-            StartCoroutine(EnableClickingWhenChangeStarts(changeStartTime));
+            StartCoroutine(EnableClickingWhenChangeEnds(changeFinishTime));
         }
         
         // Wait for the appropriate time before starting beeps
